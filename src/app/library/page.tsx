@@ -5,6 +5,7 @@ import { cn, formatTimeDifference } from '@/lib/utils';
 import { BookOpenText, ClockIcon, Delete, ScanEye } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { useAuth } from '@/components/auth/AuthProvider';
 
 export interface Chat {
   id: string;
@@ -16,12 +17,20 @@ export interface Chat {
 const Page = () => {
   const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user, guestId } = useAuth();
 
   useEffect(() => {
     const fetchChats = async () => {
       setLoading(true);
 
-      const res = await fetch(`/api/chats`, {
+      const queryParams = new URLSearchParams();
+      if (user?.id) {
+        queryParams.append('userId', user.id);
+      } else if (guestId) {
+        queryParams.append('guestId', guestId);
+      }
+
+      const res = await fetch(`/api/chats?${queryParams.toString()}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -35,7 +44,7 @@ const Page = () => {
     };
 
     fetchChats();
-  }, []);
+  }, [user, guestId]);
 
   return loading ? (
     <div className="flex flex-row items-center justify-center min-h-screen">

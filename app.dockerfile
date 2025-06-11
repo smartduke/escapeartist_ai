@@ -2,6 +2,14 @@ FROM node:20.18.0-slim AS builder
 
 WORKDIR /home/perplexica
 
+# Accept build arguments for Supabase
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+# Make them available as environment variables during build
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
+
 COPY package.json yarn.lock ./
 RUN yarn install --frozen-lockfile --network-timeout 600000
 

@@ -10,13 +10,18 @@ services:
     restart: unless-stopped
 
   app:
-    image: itzcrazykns1337/perplexica:main
+    image: infoxai/app:latest
     build:
       context: .
       dockerfile: app.dockerfile
+      args:
+        - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+        - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
     environment:
       - SEARXNG_API_URL=http://searxng:8080
       - DATA_DIR=/home/perplexica
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
     ports:
       - 3000:3000
     networks:

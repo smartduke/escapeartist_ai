@@ -50,6 +50,8 @@ type Body = {
   chatModel: ChatModel;
   embeddingModel: EmbeddingModel;
   systemInstructions: string;
+  userId?: string;
+  guestId?: string;
 };
 
 const handleEmitterEvents = async (
@@ -133,6 +135,8 @@ const handleHistorySave = async (
   humanMessageId: string,
   focusMode: string,
   files: string[],
+  userId?: string,
+  guestId?: string,
 ) => {
   const chat = await db.query.chats.findFirst({
     where: eq(chats.id, message.chatId),
@@ -147,6 +151,8 @@ const handleHistorySave = async (
         createdAt: new Date().toString(),
         focusMode: focusMode,
         files: files.map(getFileDetails),
+        userId: userId || null,
+        guestId: guestId || null,
       })
       .execute();
   }
@@ -287,7 +293,7 @@ export const POST = async (req: Request) => {
     const encoder = new TextEncoder();
 
     handleEmitterEvents(stream, writer, encoder, aiMessageId, message.chatId);
-    handleHistorySave(message, humanMessageId, body.focusMode, body.files);
+    handleHistorySave(message, humanMessageId, body.focusMode, body.files, body.userId, body.guestId);
 
     return new Response(responseStream.readable, {
       headers: {

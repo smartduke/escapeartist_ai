@@ -12,6 +12,9 @@ import { getSuggestions } from '@/lib/actions';
 import { Settings } from 'lucide-react';
 import Link from 'next/link';
 import NextError from 'next/error';
+import { useAuth } from '@/components/auth/AuthProvider';
+import { AuthModal } from '@/components/auth/AuthModal';
+import { GuestLimitWarning } from '@/components/auth/GuestLimitWarning';
 
 export type Message = {
   messageId: string;
@@ -240,9 +243,14 @@ const loadMessages = async (
 const ChatWindow = ({ id }: { id?: string }) => {
   const searchParams = useSearchParams();
   const initialMessage = searchParams.get('q');
+  const { user, guestId, guestChatCount, maxGuestChats, canCreateChat, incrementGuestChatCount } = useAuth();
 
   const [chatId, setChatId] = useState<string | undefined>(id);
   const [newChatCreated, setNewChatCreated] = useState(false);
+  
+  // Auth modal state
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
 
   const [chatModelProvider, setChatModelProvider] = useState<ChatModelProvider>(
     {
@@ -331,6 +339,13 @@ const ChatWindow = ({ id }: { id?: string }) => {
     if (loading) return;
     if (!isConfigReady) {
       toast.error('Cannot send message before the configuration is ready');
+      return;
+    }
+
+    // Check guest limits
+    if (!user && !canCreateChat) {
+      setAuthMode('login');
+      setAuthModalOpen(true);
       return;
     }
 
@@ -455,6 +470,11 @@ const ChatWindow = ({ id }: { id?: string }) => {
       }
     };
 
+    // Increment guest chat count when starting a new chat
+    if (!user && messages.length === 0) {
+      incrementGuestChatCount();
+    }
+
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: {
@@ -481,6 +501,8 @@ const ChatWindow = ({ id }: { id?: string }) => {
           provider: embeddingModelProvider.provider,
         },
         systemInstructions: localStorage.getItem('systemInstructions'),
+        userId: user?.id || null,
+        guestId: !user ? guestId : null,
       }),
     });
 
@@ -557,6 +579,20 @@ const ChatWindow = ({ id }: { id?: string }) => {
       <NextError statusCode={404} />
     ) : (
       <div>
+        {/* Guest limit warning for non-authenticated users */}
+        {!user && guestChatCount > 0 && (
+          <div className="p-4">
+            <GuestLimitWarning
+              currentCount={guestChatCount}
+              maxCount={maxGuestChats}
+              onLoginClick={() => {
+                setAuthMode('login');
+                setAuthModalOpen(true);
+              }}
+            />
+          </div>
+        )}
+        
         {messages.length > 0 ? (
           <>
             <Navbar chatId={chatId!} messages={messages} />
@@ -585,6 +621,14 @@ const ChatWindow = ({ id }: { id?: string }) => {
             setFiles={setFiles}
           />
         )}
+        
+        {/* Authentication Modal */}
+        <AuthModal
+          isOpen={authModalOpen}
+          onClose={() => setAuthModalOpen(false)}
+          mode={authMode}
+          onModeChange={setAuthMode}
+        />
       </div>
     )
   ) : (

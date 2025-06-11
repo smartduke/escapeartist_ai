@@ -1,11 +1,12 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import { BookOpenText, Home, Search, SquarePen, Settings } from 'lucide-react';
+import { BookOpenText, Home, Search, SquarePen, Settings, User, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { useSelectedLayoutSegments } from 'next/navigation';
 import React, { useState, type ReactNode } from 'react';
 import Layout from './Layout';
+import { useAuth } from '@/components/auth/AuthProvider';
 
 const VerticalIconContainer = ({ children }: { children: ReactNode }) => {
   return (
@@ -15,6 +16,10 @@ const VerticalIconContainer = ({ children }: { children: ReactNode }) => {
 
 const Sidebar = ({ children }: { children: React.ReactNode }) => {
   const segments = useSelectedLayoutSegments();
+  const { user, signOut } = useAuth();
+  
+  // Debug logging for user state in Sidebar
+  console.log('Sidebar Debug - User state:', { user, hasUser: !!user });
 
   const navLinks = [
     {
@@ -64,9 +69,30 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
             ))}
           </VerticalIconContainer>
 
-          <Link href="/settings">
-            <Settings className="cursor-pointer" />
-          </Link>
+          <div className="flex flex-col gap-y-3">
+            {user && (() => {
+              console.log('Rendering user section for:', user);
+              return (
+                <div className="flex flex-col items-center gap-y-2">
+                  <div className="flex items-center justify-center w-8 h-8 bg-blue-600 rounded-full">
+                    <span className="text-white text-sm font-medium">
+                      {user.name?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase() || 'U'}
+                    </span>
+                  </div>
+                  <button
+                    onClick={signOut}
+                    className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded transition-colors"
+                    title="Sign out"
+                  >
+                    <LogOut size={18} className="text-black/70 dark:text-white/70" />
+                  </button>
+                </div>
+              );
+            })()}
+            <Link href="/settings">
+              <Settings className="cursor-pointer" />
+            </Link>
+          </div>
         </div>
       </div>
 

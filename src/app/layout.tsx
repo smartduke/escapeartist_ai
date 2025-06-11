@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import Sidebar from '@/components/Sidebar';
 import { Toaster } from 'sonner';
 import ThemeProvider from '@/components/theme/Provider';
+import { AuthProvider } from '@/components/auth/AuthProvider';
 
 const montserrat = Montserrat({
   weight: ['300', '400', '500', '700'],
@@ -14,9 +15,9 @@ const montserrat = Montserrat({
 });
 
 export const metadata: Metadata = {
-  title: 'Perplexica - Chat with the internet',
+  title: 'Infoxai - AI-Powered Search Engine',
   description:
-    'Perplexica is an AI powered chatbot that is connected to the internet.',
+    'Infoxai is an intelligent AI search engine that provides deep insights and answers from the internet.',
 };
 
 export default function RootLayout({
@@ -28,16 +29,18 @@ export default function RootLayout({
     <html className="h-full" lang="en" suppressHydrationWarning>
       <body className={cn('h-full', montserrat.className)}>
         <ThemeProvider>
-          <Sidebar>{children}</Sidebar>
-          <Toaster
-            toastOptions={{
-              unstyled: true,
-              classNames: {
-                toast:
-                  'bg-light-primary dark:bg-dark-secondary dark:text-white/70 text-black-70 rounded-lg p-4 flex flex-row items-center space-x-2',
-              },
-            }}
-          />
+          <AuthProvider>
+            <Sidebar>{children}</Sidebar>
+            <Toaster
+              toastOptions={{
+                unstyled: true,
+                classNames: {
+                  toast:
+                    'bg-light-primary dark:bg-dark-secondary dark:text-white/70 text-black-70 rounded-lg p-4 flex flex-row items-center space-x-2',
+                },
+              }}
+            />
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>
