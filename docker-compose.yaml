@@ -22,12 +22,17 @@ services:
       - DATA_DIR=/home/perplexica
       - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
       - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      # PostgreSQL Configuration
+      - DB_HOST=host.docker.internal
+      - DB_PORT=5432
+      - DB_USER=dinakar
+      - DB_PASSWORD=dina
+      - DB_NAME=infoxaidb
     ports:
       - 3000:3000
     networks:
       - perplexica-network
     volumes:
-      - backend-dbstore:/home/perplexica/data
       - uploads:/home/perplexica/uploads
       - ./config.toml:/home/perplexica/config.toml
     restart: unless-stopped
@@ -36,5 +41,4 @@ networks:
   perplexica-network:
 
 volumes:
-  backend-dbstore:
   uploads:

@@ -1,23 +1,21 @@
 import { sql } from 'drizzle-orm';
-import { text, integer, sqliteTable, int } from 'drizzle-orm/sqlite-core';
+import { text, integer, pgTable, boolean, jsonb, timestamp, serial } from 'drizzle-orm/pg-core';
 
-export const users = sqliteTable('users', {
+export const users = pgTable('users', {
   id: text('id').primaryKey(), // Supabase user ID
   email: text('email').notNull(),
   name: text('name'),
-  createdAt: text('createdAt').notNull(),
-  isGuest: int('isGuest').default(0), // 0 = false, 1 = true
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  isGuest: boolean('isGuest').default(false),
 });
 
-export const messages = sqliteTable('messages', {
-  id: integer('id').primaryKey(),
+export const messages = pgTable('messages', {
+  id: serial('id').primaryKey(),
   content: text('content').notNull(),
   chatId: text('chatId').notNull(),
   messageId: text('messageId').notNull(),
-  role: text('type', { enum: ['assistant', 'user'] }),
-  metadata: text('metadata', {
-    mode: 'json',
-  }),
+  role: text('role', { enum: ['assistant', 'user'] }),
+  metadata: jsonb('metadata'),
 });
 
 interface File {
@@ -25,14 +23,14 @@ interface File {
   fileId: string;
 }
 
-export const chats = sqliteTable('chats', {
+export const chats = pgTable('chats', {
   id: text('id').primaryKey(),
   title: text('title').notNull(),
-  createdAt: text('createdAt').notNull(),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
   focusMode: text('focusMode').notNull(),
   userId: text('userId'), // Can be null for guest users, or reference users.id
   guestId: text('guestId'), // For tracking guest sessions
-  files: text('files', { mode: 'json' })
+  files: jsonb('files')
     .$type<File[]>()
-    .default(sql`'[]'`),
+    .default([]),
 });
