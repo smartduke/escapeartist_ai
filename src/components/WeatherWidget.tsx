@@ -1,5 +1,6 @@
-import { Cloud, Sun, CloudRain, CloudSnow, Wind } from 'lucide-react';
+import { Cloud, Sun, CloudRain, CloudSnow, Wind, Droplets } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { cn } from '@/lib/utils';
 
 const WeatherWidget = () => {
   const [data, setData] = useState({
@@ -87,54 +88,48 @@ const WeatherWidget = () => {
   }, []);
 
   return (
-    <div className="bg-light-secondary dark:bg-dark-secondary rounded-xl border border-light-200 dark:border-dark-200 shadow-sm flex flex-row items-center w-full h-24 min-h-[96px] max-h-[96px] px-3 py-2 gap-3">
+    <div className={cn(
+      "bg-light-primary/50 dark:bg-dark-primary/50 backdrop-blur-lg rounded-xl",
+      "border border-black/5 dark:border-white/5",
+      "shadow-sm hover:shadow-md transition-shadow duration-300",
+      "flex items-center justify-between lg:justify-start gap-3 px-3 py-2 h-[52px] w-full"
+    )}>
       {loading ? (
-        <>
-          <div className="flex flex-col items-center justify-center w-16 min-w-16 max-w-16 h-full animate-pulse">
-            <div className="h-10 w-10 rounded-full bg-light-200 dark:bg-dark-200 mb-2" />
-            <div className="h-4 w-10 rounded bg-light-200 dark:bg-dark-200" />
+        <div className="flex items-center gap-3 w-full animate-pulse">
+          <div className="h-8 w-8 rounded-full bg-black/5 dark:bg-white/5" />
+          <div className="space-y-2 flex-1">
+            <div className="h-2 w-20 rounded bg-black/5 dark:bg-white/5" />
+            <div className="h-2 w-16 rounded bg-black/5 dark:bg-white/5" />
           </div>
-          <div className="flex flex-col justify-between flex-1 h-full py-1 animate-pulse">
-            <div className="flex flex-row items-center justify-between">
-              <div className="h-3 w-20 rounded bg-light-200 dark:bg-dark-200" />
-              <div className="h-3 w-12 rounded bg-light-200 dark:bg-dark-200" />
-            </div>
-            <div className="h-3 w-16 rounded bg-light-200 dark:bg-dark-200 mt-1" />
-            <div className="flex flex-row justify-between w-full mt-auto pt-1 border-t border-light-200 dark:border-dark-200">
-              <div className="h-3 w-16 rounded bg-light-200 dark:bg-dark-200" />
-              <div className="h-3 w-8 rounded bg-light-200 dark:bg-dark-200" />
-            </div>
-          </div>
-        </>
+        </div>
       ) : (
         <>
-          <div className="flex flex-col items-center justify-center w-16 min-w-16 max-w-16 h-full">
+          <div className="flex items-center gap-1">
             <img
               src={`/weather-ico/${data.icon}.svg`}
               alt={data.condition}
-              className="h-10 w-auto"
+              className="h-7 w-7"
             />
-            <span className="text-base font-semibold text-black dark:text-white">
-              {data.temperature}°C
+            <span className="text-base font-medium text-black dark:text-white">
+              {data.temperature}°
             </span>
           </div>
-          <div className="flex flex-col justify-between flex-1 h-full py-1">
-            <div className="flex flex-row items-center justify-between">
-              <span className="text-xs font-medium text-black dark:text-white">
-                {data.location}
-              </span>
-              <span className="flex items-center text-xs text-black/60 dark:text-white/60">
-                <Wind className="w-3 h-3 mr-1" />
-                {data.windSpeed} km/h
-              </span>
+          <div className="h-6 w-[1px] bg-black/5 dark:bg-white/5" />
+          <div className="flex items-center gap-3 text-xs">
+            <div className="flex items-center gap-1 text-black/60 dark:text-white/60">
+              <Wind className="w-3 h-3" />
+              <span>{data.windSpeed}km/h</span>
             </div>
-            <span className="text-xs text-black/60 dark:text-white/60 mt-1">
-              {data.condition}
+            <div className="flex items-center gap-1 text-black/60 dark:text-white/60">
+              <Droplets className="w-3 h-3" />
+              <span>{data.humidity}%</span>
+            </div>
+          </div>
+          <div className="h-6 w-[1px] bg-black/5 dark:bg-white/5" />
+          <div className="text-xs">
+            <span className="font-medium text-black dark:text-white">
+              {data.location}
             </span>
-            <div className="flex flex-row justify-between w-full mt-auto pt-1 border-t border-light-200 dark:border-dark-200 text-xs text-black/60 dark:text-white/60">
-              <span>Humidity: {data.humidity}%</span>
-              <span>Now</span>
-            </div>
           </div>
         </>
       )}

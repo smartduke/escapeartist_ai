@@ -5,9 +5,10 @@ import { Document } from '@langchain/core/documents';
 import Navbar from './Navbar';
 import Chat from './Chat';
 import EmptyChat from './EmptyChat';
+import WeatherWidget from './WeatherWidget';
 import crypto from 'crypto';
 import { toast } from 'sonner';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { getSuggestions } from '@/lib/actions';
 import { Settings } from 'lucide-react';
 import Link from 'next/link';
@@ -241,6 +242,7 @@ const loadMessages = async (
 };
 
 const ChatWindow = ({ id }: { id?: string }) => {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const initialMessage = searchParams.get('q');
   const { user, guestId, guestChatCount, maxGuestChats, canCreateChat, incrementGuestChatCount } = useAuth();
@@ -312,13 +314,16 @@ const ChatWindow = ({ id }: { id?: string }) => {
         setFiles,
         setFileIds,
       );
-    } else if (!chatId) {
+    } else if (!chatId && !id) {
+      // Only create new chat ID if we're on the home page (no id prop)
       setNewChatCreated(true);
       setIsMessagesLoaded(true);
       setChatId(crypto.randomBytes(20).toString('hex'));
+    } else if (id) {
+      // If we have an id prop but no chatId state, set it
+      setChatId(id);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [chatId, id, newChatCreated, isMessagesLoaded, messages.length]);
 
   const messagesRef = useRef<Message[]>([]);
 
@@ -579,20 +584,6 @@ const ChatWindow = ({ id }: { id?: string }) => {
       <NextError statusCode={404} />
     ) : (
       <div>
-        {/* Guest limit warning for non-authenticated users */}
-        {!user && guestChatCount > 0 && (
-          <div className="p-4">
-            <GuestLimitWarning
-              currentCount={guestChatCount}
-              maxCount={maxGuestChats}
-              onLoginClick={() => {
-                setAuthMode('login');
-                setAuthModalOpen(true);
-              }}
-            />
-          </div>
-        )}
-        
         {messages.length > 0 ? (
           <>
             <Navbar chatId={chatId!} messages={messages} />
@@ -609,17 +600,31 @@ const ChatWindow = ({ id }: { id?: string }) => {
             />
           </>
         ) : (
-          <EmptyChat
-            sendMessage={sendMessage}
-            focusMode={focusMode}
-            setFocusMode={setFocusMode}
-            optimizationMode={optimizationMode}
-            setOptimizationMode={setOptimizationMode}
-            fileIds={fileIds}
-            setFileIds={setFileIds}
-            files={files}
-            setFiles={setFiles}
-          />
+          <>
+            {/* Weather Widget - Desktop */}
+            <div className="hidden lg:block absolute top-6 right-8 z-50">
+              <WeatherWidget />
+            </div>
+            
+            {/* Mobile Weather Widget */}
+            <div className="fixed top-0 left-0 right-0 lg:hidden bg-light-primary/80 dark:bg-dark-primary/80 backdrop-blur-lg z-50">
+              <div className="max-w-screen-lg mx-auto px-4 py-2">
+                <WeatherWidget />
+              </div>
+            </div>
+            
+            <EmptyChat
+              sendMessage={sendMessage}
+              focusMode={focusMode}
+              setFocusMode={setFocusMode}
+              optimizationMode={optimizationMode}
+              setOptimizationMode={setOptimizationMode}
+              fileIds={fileIds}
+              setFileIds={setFileIds}
+              files={files}
+              setFiles={setFiles}
+            />
+          </>
         )}
         
         {/* Authentication Modal */}

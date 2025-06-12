@@ -1,12 +1,11 @@
-import { Settings, LogIn } from 'lucide-react';
+import { Settings, LogIn, Bot } from 'lucide-react';
 import EmptyChatMessageInput from './EmptyChatMessageInput';
 import { File } from './ChatWindow';
 import Link from 'next/link';
-import WeatherWidget from './WeatherWidget';
-import NewsArticleWidget from './NewsArticleWidget';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { useState } from 'react';
 import { AuthModal } from '@/components/auth/AuthModal';
+import { cn } from '@/lib/utils';
 
 const EmptyChat = ({
   sendMessage,
@@ -38,65 +37,36 @@ const EmptyChat = ({
 
   return (
     <div className="relative">
-      <div className="absolute w-full flex flex-row items-center justify-end mr-5 mt-5 space-x-2">
-        {!user && (
-          <button
-            onClick={() => {
-              console.log('Sign In button clicked!');
-              setAuthMode('login');
-              setAuthModalOpen(true);
-              console.log('Modal should open now');
-            }}
-            className="flex items-center space-x-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm transition-colors"
-          >
-            <LogIn size={16} />
-            <span>Sign In</span>
-          </button>
-        )}
-        <Link href="/settings">
-          <Settings className="cursor-pointer lg:hidden" />
+      <div className="absolute w-full flex flex-row items-center justify-end px-4 lg:px-8 pt-4 lg:pt-6">
+        <Link href="/settings" className="ml-4">
+          <Settings className="cursor-pointer lg:hidden text-black/70 dark:text-white/70 hover:text-black dark:hover:text-white transition-colors" />
         </Link>
       </div>
-      <div className="flex flex-col items-center justify-center min-h-screen max-w-screen-sm mx-auto p-2 space-y-4">
+      <div className="flex flex-col items-center justify-center min-h-screen max-w-screen-lg mx-auto p-4 lg:p-8 space-y-8">
         <div className="flex flex-col items-center justify-center w-full space-y-8">
-          <div className="text-center space-y-2">
-            <h2 className="text-black/70 dark:text-white/70 text-3xl font-medium -mt-8">
-              Research begins here.
-            </h2>
-            {!user && (
-              <p className="text-black/50 dark:text-white/50 text-sm">
-                Guest users get {maxGuestChats} free chats. {guestChatCount > 0 && `You have ${maxGuestChats - guestChatCount} remaining.`}
-                <br />
-                <button
-                  onClick={() => {
-                    setAuthMode('signup');
-                    setAuthModalOpen(true);
-                  }}
-                  className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline"
-                >
-                  Sign up for unlimited chats
-                </button>
-              </p>
-            )}
+          <div className="text-center space-y-3">
+            <div className="flex items-center justify-center space-x-3">
+              <Bot className="text-[#24A0ED] w-6 h-6 opacity-80 stroke-[1.5]" />
+              <h2 className="text-black/90 dark:text-white/90 text-3xl font-medium">
+                How can I help you today?
+              </h2>
+            </div>
+            <p className="text-black/50 dark:text-white/50 text-base">
+              Ask anything - from quick answers to in-depth research
+            </p>
           </div>
-          <EmptyChatMessageInput
-            sendMessage={sendMessage}
-            focusMode={focusMode}
-            setFocusMode={setFocusMode}
-            optimizationMode={optimizationMode}
-            setOptimizationMode={setOptimizationMode}
-            fileIds={fileIds}
-            setFileIds={setFileIds}
-            files={files}
-            setFiles={setFiles}
-          />
-        </div>
-        <div className="flex flex-col w-full gap-4 mt-2 sm:flex-row sm:justify-center">
-          <div className="flex-1 max-w-xs">
-            <WeatherWidget />
-          </div>
-          <div className="flex-1 max-w-xs">
-            <NewsArticleWidget />
+          <div className="w-full max-w-3xl mx-auto">
+            <EmptyChatMessageInput
+              sendMessage={sendMessage}
+              focusMode={focusMode}
+              setFocusMode={setFocusMode}
+              optimizationMode={optimizationMode}
+              setOptimizationMode={setOptimizationMode}
+              fileIds={fileIds}
+              setFileIds={setFileIds}
+              files={files}
+              setFiles={setFiles}
+            />
           </div>
         </div>
       </div>

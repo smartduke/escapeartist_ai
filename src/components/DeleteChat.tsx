@@ -58,12 +58,14 @@ const DeleteChat = ({
   return (
     <>
       <button
-        onClick={() => {
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
           setConfirmationDialogOpen(true);
         }}
-        className="bg-transparent text-red-400 hover:scale-105 transition duration-200"
+        className="p-1 hover:bg-black/20 dark:hover:bg-white/20 rounded transition-all duration-300 ease-in-out"
       >
-        <Trash size={17} />
+        <Trash size={12} className="text-red-400" />
       </button>
       <Transition appear show={confirmationDialogOpen} as={Fragment}>
         <Dialog
