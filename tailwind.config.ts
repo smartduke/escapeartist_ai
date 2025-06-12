@@ -2,15 +2,15 @@ import type { Config } from 'tailwindcss';
 import type { DefaultColors } from 'tailwindcss/types/generated/colors';
 
 const themeDark = (colors: DefaultColors) => ({
-  50: '#0a0a0a',
-  100: '#111111',
-  200: '#1c1c1c',
+  50: '#111827',  // Primary background - Deep blue-gray
+  100: '#1e293b', // Secondary - Rich slate
+  200: '#334155', // Accent - Medium slate
 });
 
 const themeLight = (colors: DefaultColors) => ({
-  50: '#fcfcf9',
-  100: '#f3f3ee',
-  200: '#e8e8e3',
+  50: '#e2e7f0',  // Primary background - Cool gray-blue (226, 231, 240)
+  100: '#f8fbff', // Secondary - Bright cool white (248, 251, 255)
+  200: '#f1f5f9', // Accent - Soft cool gray
 });
 
 const config: Config = {
