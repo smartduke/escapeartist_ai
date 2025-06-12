@@ -11,3 +11,41 @@
     display: none;
   }
 }
+
+/* Custom tooltip styles - Small but readable */
+.tiny-tooltip {
+  font-size: 11px !important;
+  padding: 3px 6px !important;
+  border-radius: 4px !important;
+  max-width: 80px !important;
+  min-width: auto !important;
+  width: auto !important;
+  z-index: 9999 !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2) !important;
+}
+
+/* Apply to all react-tooltip instances */
+.react-tooltip,
+.react-tooltip.react-tooltip,
+div.react-tooltip,
+[data-tooltip-id] ~ .react-tooltip,
+.react-tooltip[role="tooltip"] {
+  font-size: 11px !important;
+  padding: 3px 6px !important;
+  border-radius: 4px !important;
+  max-width: 80px !important;
+  min-width: auto !important;
+  width: auto !important;
+  z-index: 9999 !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+}
+
+/* Even more specific selectors */
+.react-tooltip *,
+.tiny-tooltip * {
+  font-size: 11px !important;
+  line-height: 1.2 !important;
+}
