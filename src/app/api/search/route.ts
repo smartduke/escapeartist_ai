@@ -13,6 +13,9 @@ import {
   getCustomOpenaiModelName,
 } from '@/lib/config';
 import { searchHandlers } from '@/lib/search';
+import { trackUsage } from '@/lib/usage';
+import { getServerUserFromRequest } from '@/lib/supabase/server';
+import { NextRequest } from 'next/server';
 
 interface chatModel {
   provider: string;
@@ -37,7 +40,13 @@ interface ChatRequestBody {
   systemInstructions?: string;
 }
 
-export const POST = async (req: Request) => {
+// Function to estimate token usage based on text length
+const estimateTokens = (text: string): number => {
+  // Rough estimation: 1 token ≈ 4 characters (conservative estimate)
+  return Math.ceil(text.length / 4);
+};
+
+export const POST = async (req: NextRequest) => {
   try {
     const body: ChatRequestBody = await req.json();
 
@@ -47,6 +56,9 @@ export const POST = async (req: Request) => {
         { status: 400 },
       );
     }
+
+    // Get authenticated user for usage tracking
+    const user = await getServerUserFromRequest(req);
 
     body.history = body.history || [];
     body.optimizationMode = body.optimizationMode || 'balanced';
@@ -156,7 +168,22 @@ export const POST = async (req: Request) => {
             }
           });
 
-          emitter.on('end', () => {
+          emitter.on('end', async () => {
+            // Track usage for non-streaming mode
+            if (user && message) {
+              try {
+                const inputTokens = estimateTokens(body.query);
+                const outputTokens = estimateTokens(message);
+                const totalTokens = inputTokens + outputTokens;
+                const modelName = body.chatModel?.name || chatModel;
+
+                console.log(`Tracking search usage: ${modelName}, User: ${user.id}, Tokens: ${totalTokens}`);
+                await trackUsage(user.id, modelName, totalTokens);
+              } catch (error) {
+                console.error('Failed to track search usage:', error);
+              }
+            }
+            
             resolve(Response.json({ message, sources }, { status: 200 }));
           });
 
@@ -180,6 +207,7 @@ export const POST = async (req: Request) => {
     const stream = new ReadableStream({
       start(controller) {
         let sources: any[] = [];
+        let fullMessage = '';
 
         controller.enqueue(
           encoder.encode(
@@ -205,6 +233,7 @@ export const POST = async (req: Request) => {
             const parsedData = JSON.parse(data);
 
             if (parsedData.type === 'response') {
+              fullMessage += parsedData.data;
               controller.enqueue(
                 encoder.encode(
                   JSON.stringify({
@@ -229,8 +258,23 @@ export const POST = async (req: Request) => {
           }
         });
 
-        emitter.on('end', () => {
+        emitter.on('end', async () => {
           if (signal.aborted) return;
+
+          // Track usage for streaming mode
+          if (user && fullMessage) {
+            try {
+              const inputTokens = estimateTokens(body.query);
+              const outputTokens = estimateTokens(fullMessage);
+              const totalTokens = inputTokens + outputTokens;
+              const modelName = body.chatModel?.name || chatModel;
+
+              console.log(`Tracking search stream usage: ${modelName}, User: ${user.id}, Tokens: ${totalTokens}`);
+              await trackUsage(user.id, modelName, totalTokens);
+            } catch (error) {
+              console.error('Failed to track search stream usage:', error);
+            }
+          }
 
           controller.enqueue(
             encoder.encode(

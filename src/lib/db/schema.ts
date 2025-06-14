@@ -34,3 +34,23 @@ export const chats = pgTable('chats', {
     .$type<File[]>()
     .default([]),
 });
+
+export const subscriptions = pgTable('subscriptions', {
+  id: serial('id').primaryKey(),
+  userId: text('userId').notNull().references(() => users.id),
+  plan: text('plan', { enum: ['free', 'pro_monthly', 'pro_yearly'] }).notNull(),
+  status: text('status', { enum: ['active', 'inactive', 'canceled', 'past_due', 'pending'] }).notNull(),
+  razorpaySubscriptionId: text('razorpaySubscriptionId'),
+  currentPeriodStart: timestamp('currentPeriodStart').notNull(),
+  currentPeriodEnd: timestamp('currentPeriodEnd').notNull(),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+});
+
+export const usage = pgTable('usage', {
+  id: serial('id').primaryKey(),
+  userId: text('userId').notNull().references(() => users.id),
+  model: text('model').notNull(),
+  tokensUsed: integer('tokensUsed').default(0).notNull(),
+  periodStart: timestamp('periodStart').notNull(),
+  periodEnd: timestamp('periodEnd').notNull(),
+});

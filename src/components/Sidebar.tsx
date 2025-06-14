@@ -13,7 +13,10 @@ import {
   Trash2,
   PanelLeftClose,
   PanelLeftOpen,
-  Home
+  Home,
+  CreditCard,
+  DollarSign,
+  User
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSelectedLayoutSegments, usePathname } from 'next/navigation';
@@ -393,6 +396,22 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
                   <div className="p-3">
                     {user ? (
                       <div className="flex flex-col space-y-3">
+                        <Link
+                          href="/profile"
+                          onClick={() => setDropdownOpen(false)}
+                          className="flex items-center space-x-2 p-2 hover:bg-black/10 dark:hover:bg-white/10 rounded-lg transition-colors text-black dark:text-white/70"
+                        >
+                          <User size={16} className="text-black dark:text-white/70" />
+                          <span className="text-sm">Profile</span>
+                        </Link>
+                        <Link
+                          href="/pricing"
+                          onClick={() => setDropdownOpen(false)}
+                          className="flex items-center space-x-2 p-2 hover:bg-black/10 dark:hover:bg-white/10 rounded-lg transition-colors text-black dark:text-white/70"
+                        >
+                          <CreditCard size={16} className="text-black dark:text-white/70" />
+                          <span className="text-sm">Pricing</span>
+                        </Link>
                         <Link
                           href="/settings"
                           onClick={() => setDropdownOpen(false)}

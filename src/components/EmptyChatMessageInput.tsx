@@ -5,6 +5,7 @@ import CopilotToggle from './MessageInputActions/Copilot';
 import Focus from './MessageInputActions/Focus';
 import Optimization from './MessageInputActions/Optimization';
 import Attach from './MessageInputActions/Attach';
+import ModelSelector from './MessageInputActions/ModelSelector';
 import { File } from './ChatWindow';
 import { cn } from '@/lib/utils';
 
@@ -100,6 +101,7 @@ const EmptyChatMessageInput = ({
                 setFiles={setFiles}
                 showText
               />
+              <ModelSelector />
             </div>
           </div>
           <div className="flex flex-row items-center space-x-1 sm:space-x-4">

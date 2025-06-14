@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "npm run db:push && next build",
+    "build:docker": "next build",
     "start": "next start",
     "lint": "next lint",
     "format:write": "prettier . --write",
@@ -41,6 +42,7 @@
     "next-themes": "^0.3.0",
     "pdf-parse": "^1.1.1",
     "pg": "^8.16.0",
+    "razorpay": "^2.9.2",
     "react": "^18",
     "react-dom": "^18",
     "react-text-to-speech": "^0.14.5",

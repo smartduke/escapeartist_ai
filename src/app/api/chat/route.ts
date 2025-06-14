@@ -21,6 +21,7 @@ import {
   getCustomOpenaiModelName,
 } from '@/lib/config';
 import { searchHandlers } from '@/lib/search';
+import { trackUsage } from '@/lib/usage';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -54,12 +55,21 @@ type Body = {
   guestId?: string;
 };
 
+// Function to estimate token usage based on text length
+const estimateTokens = (text: string): number => {
+  // Rough estimation: 1 token ≈ 4 characters (conservative estimate)
+  return Math.ceil(text.length / 4);
+};
+
 const handleEmitterEvents = async (
   stream: EventEmitter,
   writer: WritableStreamDefaultWriter,
   encoder: TextEncoder,
   aiMessageId: string,
   chatId: string,
+  userId: string | undefined,
+  modelName: string,
+  userQuery: string,
 ) => {
   let recievedMessage = '';
   let sources: any[] = [];
@@ -92,7 +102,7 @@ const handleEmitterEvents = async (
       sources = parsedData.data;
     }
   });
-  stream.on('end', () => {
+  stream.on('end', async () => {
     writer.write(
       encoder.encode(
         JSON.stringify({
@@ -103,7 +113,8 @@ const handleEmitterEvents = async (
     );
     writer.close();
 
-    db.insert(messagesSchema)
+    // Save the message to database
+    await db.insert(messagesSchema)
       .values({
         content: recievedMessage,
         chatId: chatId,
@@ -115,6 +126,22 @@ const handleEmitterEvents = async (
         }),
       })
       .execute();
+
+    // Track usage if user is authenticated
+    if (userId && recievedMessage) {
+      try {
+        // Estimate tokens: input query + output response
+        const inputTokens = estimateTokens(userQuery);
+        const outputTokens = estimateTokens(recievedMessage);
+        const totalTokens = inputTokens + outputTokens;
+
+        console.log(`Tracking usage: ${modelName}, User: ${userId}, Tokens: ${totalTokens}`);
+        
+        await trackUsage(userId, modelName, totalTokens);
+      } catch (error) {
+        console.error('Failed to track usage:', error);
+      }
+    }
   });
   stream.on('error', (data) => {
     const parsedData = JSON.parse(data);
@@ -291,7 +318,10 @@ export const POST = async (req: Request) => {
     const writer = responseStream.writable.getWriter();
     const encoder = new TextEncoder();
 
-    handleEmitterEvents(stream, writer, encoder, aiMessageId, message.chatId);
+    // Get the model name for tracking
+    const modelName = body.chatModel?.name || Object.keys(chatModelProvider)[0];
+
+    handleEmitterEvents(stream, writer, encoder, aiMessageId, message.chatId, body.userId, modelName, message.content);
     handleHistorySave(message, humanMessageId, body.focusMode, body.files, body.userId, body.guestId);
 
     return new Response(responseStream.readable, {

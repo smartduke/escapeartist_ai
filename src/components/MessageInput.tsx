@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
 import Attach from './MessageInputActions/Attach';
 import CopilotToggle from './MessageInputActions/Copilot';
+import ModelSelector from './MessageInputActions/ModelSelector';
 import { File } from './ChatWindow';
 import AttachSmall from './MessageInputActions/AttachSmall';
 
@@ -99,6 +100,7 @@ const MessageInput = ({
       />
       {mode === 'single' && (
         <div className="flex flex-row items-center space-x-4">
+          <ModelSelector />
           <CopilotToggle
             copilotEnabled={copilotEnabled}
             setCopilotEnabled={setCopilotEnabled}
@@ -113,12 +115,15 @@ const MessageInput = ({
       )}
       {mode === 'multi' && (
         <div className="flex flex-row items-center justify-between w-full pt-2">
-          <AttachSmall
-            fileIds={fileIds}
-            setFileIds={setFileIds}
-            files={files}
-            setFiles={setFiles}
-          />
+          <div className="flex flex-row items-center space-x-2">
+            <AttachSmall
+              fileIds={fileIds}
+              setFileIds={setFileIds}
+              files={files}
+              setFiles={setFiles}
+            />
+            <ModelSelector />
+          </div>
           <div className="flex flex-row items-center space-x-4">
             <CopilotToggle
               copilotEnabled={copilotEnabled}

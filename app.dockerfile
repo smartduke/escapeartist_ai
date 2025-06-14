@@ -18,7 +18,7 @@ COPY src ./src
 COPY public ./public
 
 RUN mkdir -p /home/perplexica/data
-RUN yarn build
+RUN yarn build:docker
 
 FROM node:20.18.0-slim
 

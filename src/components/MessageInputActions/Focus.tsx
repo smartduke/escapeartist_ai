@@ -7,7 +7,16 @@ import {
   Target,
   MessageCircle,
   BookText,
-  Check
+  Check,
+  Newspaper,
+  ShoppingCart,
+  Stethoscope,
+  TrendingUp,
+  Plane,
+  Briefcase,
+  Scale,
+  ChefHat,
+  Home
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -55,6 +64,60 @@ const focusModes = [
     description: 'Search for discussions and opinions',
     icon: <MessageCircle size={14} className="stroke-[1.5]" />,
   },
+  {
+    key: 'newsSearch',
+    title: 'News',
+    description: 'Get current news and breaking stories',
+    icon: <Newspaper size={14} className="stroke-[1.5]" />,
+  },
+  {
+    key: 'shoppingSearch',
+    title: 'Shopping',
+    description: 'Find products and compare prices',
+    icon: <ShoppingCart size={14} className="stroke-[1.5]" />,
+  },
+  {
+    key: 'medicalSearch',
+    title: 'Medical',
+    description: 'Search medical information and research',
+    icon: <Stethoscope size={14} className="stroke-[1.5]" />,
+  },
+  {
+    key: 'financeSearch',
+    title: 'Finance',
+    description: 'Financial news and market information',
+    icon: <TrendingUp size={14} className="stroke-[1.5]" />,
+  },
+  {
+    key: 'travelSearch',
+    title: 'Travel',
+    description: 'Find travel destinations and tips',
+    icon: <Plane size={14} className="stroke-[1.5]" />,
+  },
+  {
+    key: 'jobSearch',
+    title: 'Jobs',
+    description: 'Career information and job search',
+    icon: <Briefcase size={14} className="stroke-[1.5]" />,
+  },
+  {
+    key: 'legalSearch',
+    title: 'Legal',
+    description: 'Legal information and guidance',
+    icon: <Scale size={14} className="stroke-[1.5]" />,
+  },
+  {
+    key: 'recipeSearch',
+    title: 'Recipes',
+    description: 'Find recipes and cooking instructions',
+    icon: <ChefHat size={14} className="stroke-[1.5]" />,
+  },
+  {
+    key: 'realEstateSearch',
+    title: 'Real Estate',
+    description: 'Property information and market trends',
+    icon: <Home size={14} className="stroke-[1.5]" />,
+  },
 ];
 
 const Focus = ({
@@ -95,8 +158,8 @@ const Focus = ({
         leaveFrom="opacity-100 translate-y-0"
         leaveTo="opacity-0 translate-y-2"
       >
-        <PopoverPanel className="absolute z-10 w-60 left-0 mt-1">
-          <div className="bg-light-primary dark:bg-dark-primary border rounded-lg border-black/5 dark:border-white/5 shadow-lg shadow-black/5 dark:shadow-white/5 w-full overflow-hidden divide-y divide-black/5 dark:divide-white/5">
+        <PopoverPanel className="absolute z-10 w-64 left-0 mt-1">
+          <div className="bg-light-primary dark:bg-dark-primary border rounded-lg border-black/5 dark:border-white/5 shadow-lg shadow-black/5 dark:shadow-white/5 w-full overflow-hidden divide-y divide-black/5 dark:divide-white/5 max-h-80 overflow-y-auto">
             {focusModes.map((mode, i) => (
               <PopoverButton
                 onClick={() => setFocusMode(mode.key)}

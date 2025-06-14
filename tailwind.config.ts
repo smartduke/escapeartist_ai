@@ -8,7 +8,7 @@ const themeDark = (colors: DefaultColors) => ({
 });
 
 const themeLight = (colors: DefaultColors) => ({
-  50: '#e2e7f0',  // Primary background - Cool gray-blue (226, 231, 240)
+  50: 'rgb(237 243 255)',  // Primary background - Light blue
   100: '#f8fbff', // Secondary - Bright cool white (248, 251, 255)
   200: '#f1f5f9', // Accent - Soft cool gray
 });

@@ -28,6 +28,18 @@ services:
       - DB_USER=dinakar
       - DB_PASSWORD=dina
       - DB_NAME=infoxaidb
+      # Razorpay Configuration
+      - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID}
+      - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET}
+      - RAZORPAY_WEBHOOK_SECRET=${RAZORPAY_WEBHOOK_SECRET}
+      - NEXT_PUBLIC_RAZORPAY_KEY_ID=${NEXT_PUBLIC_RAZORPAY_KEY_ID}
+      # Token Limits (add more models as needed)
+      - FREE_LIMIT_GPT4=${FREE_LIMIT_GPT4:-10000}
+      - PRO_LIMIT_GPT4=${PRO_LIMIT_GPT4:-100000}
+      - FREE_LIMIT_GEMINI=${FREE_LIMIT_GEMINI:-8000}
+      - PRO_LIMIT_GEMINI=${PRO_LIMIT_GEMINI:-80000}
+      - FREE_LIMIT_CLAUDE3=${FREE_LIMIT_CLAUDE3:-12000}
+      - PRO_LIMIT_CLAUDE3=${PRO_LIMIT_CLAUDE3:-120000}
     ports:
       - 3000:3000
     networks:
