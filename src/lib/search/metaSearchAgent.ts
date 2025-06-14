@@ -55,6 +55,7 @@ type BasicChainInput = {
 class MetaSearchAgent implements MetaSearchAgentType {
   private config: Config;
   private strParser = new StringOutputParser();
+  private currentSources: Document[] = [];
 
   constructor(config: Config) {
     this.config = config;
@@ -239,6 +240,13 @@ class MetaSearchAgent implements MetaSearchAgentType {
     optimizationMode: 'speed' | 'balanced' | 'quality',
     systemInstructions: string,
   ) {
+    // Enhance the response prompt for Deep Search (balanced) mode
+    const enhancedPrompt = optimizationMode === 'balanced' 
+      ? this.enhancePromptForDeepSearch(this.config.responsePrompt)
+      : this.config.responsePrompt;
+
+
+
     return RunnableSequence.from([
       RunnableMap.from({
         systemInstructions: () => systemInstructions,
@@ -274,15 +282,18 @@ class MetaSearchAgent implements MetaSearchAgentType {
             optimizationMode,
           );
 
-          return sortedDocs;
-        })
-          .withConfig({
-            runName: 'FinalSourceRetriever',
-          })
-          .pipe(this.processDocs),
+          // Store sources for emission
+          this.currentSources = sortedDocs;
+          console.log(`[MetaSearchAgent] Retrieved ${sortedDocs.length} sources for ${optimizationMode} mode`);
+          console.log(`[MetaSearchAgent] Sources:`, sortedDocs.map((doc, i) => `${i+1}. ${doc.metadata.title}`));
+
+          return this.processDocs(sortedDocs);
+        }).withConfig({
+          runName: 'FinalSourceRetriever',
+        }),
       }),
       ChatPromptTemplate.fromMessages([
-        ['system', this.config.responsePrompt],
+        ['system', enhancedPrompt],
         new MessagesPlaceholder('chat_history'),
         ['user', '{query}'],
       ]),
@@ -380,6 +391,7 @@ class MetaSearchAgent implements MetaSearchAgentType {
         return docsWithContent.slice(0, 15);
       }
     } else if (optimizationMode === 'balanced') {
+      // Deep Search mode - get more sources with lower threshold for comprehensive coverage
       const [docEmbeddings, queryEmbedding] = await Promise.all([
         embeddings.embedDocuments(
           docsWithContent.map((doc) => doc.pageContent),
@@ -410,10 +422,11 @@ class MetaSearchAgent implements MetaSearchAgentType {
         };
       });
 
+      // For Deep Search: Lower threshold (0.1 vs 0.3) and more sources (25 vs 15)
       const sortedDocs = similarity
-        .filter((sim) => sim.similarity > (this.config.rerankThreshold ?? 0.3))
+        .filter((sim) => sim.similarity > 0.1) // Lower threshold for more diverse sources
         .sort((a, b) => b.similarity - a.similarity)
-        .slice(0, 15)
+        .slice(0, 25) // More sources for comprehensive Deep Search
         .map((sim) => docsWithContent[sim.index]);
 
       return sortedDocs;
@@ -423,12 +436,71 @@ class MetaSearchAgent implements MetaSearchAgentType {
   }
 
   private processDocs(docs: Document[]) {
-    return docs
+    const processedDocs = docs
       .map(
         (_, index) =>
           `${index + 1}. ${docs[index].metadata.title} ${docs[index].pageContent}`,
       )
       .join('\n');
+    
+    // Add a header that tells the AI exactly how many sources are available
+    return `AVAILABLE SOURCES (Total: ${docs.length} sources - ONLY use citations [1] through [${docs.length}]):\n\n${processedDocs}`;
+  }
+
+  private enhancePromptForDeepSearch(originalPrompt: string): string {
+    // Add Deep Search specific instructions to the original prompt
+    const deepSearchEnhancement = `
+    
+    ### DEEP SEARCH MODE - COMPREHENSIVE RESPONSE REQUIREMENTS
+    
+    You are now operating in Deep Search mode. Your response must be exceptionally detailed and comprehensive:
+    
+    **Length Requirements:**
+    - Provide a response that is 20-25 paragraphs long
+    - Each paragraph should be substantial (4-6 sentences minimum)
+    - Total response should be approximately 2000-3000 words
+    
+    **Content Depth Requirements:**
+    - Explore multiple perspectives and angles of the topic
+    - Include historical context, background information, and evolution of the subject
+    - Provide detailed explanations of technical concepts, breaking them down for general understanding
+    - Include relevant examples, case studies, and real-world applications
+    - Discuss implications, consequences, and future outlook where applicable
+    - Address potential counterarguments or alternative viewpoints
+    - Include statistical data, research findings, and expert opinions when available
+    
+    **Structure Requirements:**
+    - Use multiple detailed sections with descriptive headings
+    - Include subsections where appropriate to organize complex information
+    - Provide smooth transitions between topics and sections
+    - Create a logical flow that builds understanding progressively
+    
+    **Analysis Requirements:**
+    - Go beyond surface-level information to provide deep analysis
+    - Explain the "why" and "how" behind facts and phenomena
+    - Connect different aspects of the topic to show relationships and dependencies
+    - Provide context about significance and relevance
+    - Include comparative analysis where relevant
+    
+    **CRITICAL CITATION REQUIREMENTS FOR DEEP SEARCH:**
+    - EVERY SINGLE SENTENCE must include at least one citation using [number] notation
+    - ONLY use citation numbers that correspond to actual sources in the provided context
+    - Count the numbered sources in the context section - do NOT exceed this number
+    - If you see sources numbered 1-10, only use citations [1] through [10]
+    - Use multiple citations per sentence when information comes from multiple sources: [1][2][3]
+    - Reuse citation numbers throughout your response - each source can be cited multiple times
+    - For detailed explanations, cite multiple relevant sources from the available set
+    - When providing examples or case studies, always cite from the available sources
+    - Historical information, statistics, and expert opinions MUST be cited from available sources
+    - If making connections between concepts, cite available sources for each concept mentioned
+    - NEVER invent citation numbers - only use what's actually provided in the context
+    - DO NOT include a "Sources:" or "References:" section at the end of your response
+    - DO NOT list sources manually - only use inline [number] citations
+    - The citation system will automatically handle source display
+    
+    Remember: This is Deep Search mode - users expect extensive, thoroughly cited coverage with every claim backed by AVAILABLE sources. Only cite sources that actually exist in the context. Never manually list sources.`;
+
+    return originalPrompt + deepSearchEnhancement;
   }
 
   private async handleStream(
@@ -440,10 +512,11 @@ class MetaSearchAgent implements MetaSearchAgentType {
         event.event === 'on_chain_end' &&
         event.name === 'FinalSourceRetriever'
       ) {
-        ``;
+        // Emit the stored sources
+        console.log(`[MetaSearchAgent] Emitting ${this.currentSources.length} sources`);
         emitter.emit(
           'data',
-          JSON.stringify({ type: 'sources', data: event.data.output }),
+          JSON.stringify({ type: 'sources', data: this.currentSources }),
         );
       }
       if (

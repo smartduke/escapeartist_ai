@@ -59,8 +59,8 @@ The API accepts a JSON object in the request body, where you define the focus mo
 
 - **`optimizationMode`** (string, optional): Specifies the optimization mode to control the balance between performance and quality. Available modes:
 
-  - `speed`: Prioritize speed and return the fastest answer.
-  - `balanced`: Provide a balanced answer with good speed and reasonable quality.
+  - `speed`: Search mode - Get quick and concise answers with fast response time.
+  - `balanced`: Deep Search mode - Get comprehensive, detailed analysis with in-depth explanations (20-25 paragraphs).
 
 - **`query`** (string, required): The search query or question.
 

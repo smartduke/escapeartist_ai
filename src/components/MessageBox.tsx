@@ -66,6 +66,8 @@ const MessageBox = ({
       message?.sources &&
       message.sources.length > 0
     ) {
+      console.log(`[MessageBox] Processing ${message.sources.length} sources for citations`);
+      console.log(`[MessageBox] Sources:`, message.sources.map((s, i) => `${i+1}. ${s.metadata?.title}`));
       setParsedMessage(
         processedMessage.replace(
           citationRegex,

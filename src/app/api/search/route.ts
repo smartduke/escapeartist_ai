@@ -30,7 +30,7 @@ interface embeddingModel {
 }
 
 interface ChatRequestBody {
-  optimizationMode: 'speed' | 'balanced';
+  optimizationMode: 'speed' | 'balanced'; // speed = Search, balanced = Deep Search
   focusMode: string;
   chatModel?: chatModel;
   embeddingModel?: embeddingModel;

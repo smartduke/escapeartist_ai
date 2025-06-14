@@ -11,14 +11,14 @@ import { Fragment } from 'react';
 const OptimizationModes = [
   {
     key: 'speed',
-    title: 'Speed',
-    description: 'Prioritize speed and get the quickest possible answer.',
+    title: 'Search',
+    description: 'Get quick and concise answers with fast response time.',
     icon: <Zap size={20} className="text-[#FF9800]" />,
   },
   {
     key: 'balanced',
-    title: 'Balanced',
-    description: 'Find the right balance between speed and accuracy',
+    title: 'Deep Search',
+    description: 'Get comprehensive, detailed analysis with in-depth explanations',
     icon: <Sliders size={20} className="text-[#4CAF50]" />,
   },
   {

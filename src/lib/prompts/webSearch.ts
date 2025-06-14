@@ -86,6 +86,8 @@ export const webSearchResponsePrompt = `
     - Use multiple sources for a single detail if applicable, such as, "Paris is a cultural hub, attracting millions of visitors annually[1][2]."
     - Always prioritize credibility and accuracy by linking all statements back to their respective context sources.
     - Avoid citing unsupported assumptions or personal interpretations; if no source supports a statement, clearly indicate the limitation.
+    - DO NOT include a "Sources:" or "References:" section at the end of your response - only use inline [number] citations.
+    - The citation system will automatically handle source display.
 
     ### Special Instructions
     - If the query involves technical, historical, or complex topics, provide detailed background and explanatory sections to ensure clarity.

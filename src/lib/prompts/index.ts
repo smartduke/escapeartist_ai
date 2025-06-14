@@ -52,6 +52,42 @@ import {
   realEstateSearchResponsePrompt,
   realEstateSearchRetrieverPrompt,
 } from './realEstateSearch';
+import {
+  businessAnalysisResponsePrompt,
+  businessAnalysisRetrieverPrompt,
+} from './businessAnalysis';
+import {
+  fitnessSearchResponsePrompt,
+  fitnessSearchRetrieverPrompt,
+} from './fitnessSearch';
+import {
+  designInspirationResponsePrompt,
+  designInspirationRetrieverPrompt,
+} from './designInspiration';
+import {
+  musicSearchResponsePrompt,
+  musicSearchRetrieverPrompt,
+} from './musicSearch';
+import {
+  gamingSearchResponsePrompt,
+  gamingSearchRetrieverPrompt,
+} from './gamingSearch';
+import {
+  educationSearchResponsePrompt,
+  educationSearchRetrieverPrompt,
+} from './educationSearch';
+import {
+  codingSearchResponsePrompt,
+  codingSearchRetrieverPrompt,
+} from './codingSearch';
+import {
+  languageSearchResponsePrompt,
+  languageSearchRetrieverPrompt,
+} from './languageSearch';
+import {
+  dataAnalysisResponsePrompt,
+  dataAnalysisRetrieverPrompt,
+} from './dataAnalysis';
 
 export default {
   webSearchResponsePrompt,
@@ -83,4 +119,22 @@ export default {
   recipeSearchRetrieverPrompt,
   realEstateSearchResponsePrompt,
   realEstateSearchRetrieverPrompt,
+  businessAnalysisResponsePrompt,
+  businessAnalysisRetrieverPrompt,
+  fitnessSearchResponsePrompt,
+  fitnessSearchRetrieverPrompt,
+  designInspirationResponsePrompt,
+  designInspirationRetrieverPrompt,
+  musicSearchResponsePrompt,
+  musicSearchRetrieverPrompt,
+  gamingSearchResponsePrompt,
+  gamingSearchRetrieverPrompt,
+  educationSearchResponsePrompt,
+  educationSearchRetrieverPrompt,
+  codingSearchResponsePrompt,
+  codingSearchRetrieverPrompt,
+  languageSearchResponsePrompt,
+  languageSearchRetrieverPrompt,
+  dataAnalysisResponsePrompt,
+  dataAnalysisRetrieverPrompt,
 };

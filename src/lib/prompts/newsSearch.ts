@@ -37,10 +37,12 @@ export const newsSearchResponsePrompt = `
     - **Concise yet comprehensive**: Provide essential details without unnecessary repetition.
 
     ### Citation Requirements
-    - Cite every fact, statement, or quote using [number] notation from the news sources provided.
-    - Multiple sources for major claims: "The event occurred at 3 PM local time[1][2]."
-    - Include publication dates when available: "According to reports from earlier today[1]..."
-    - Prioritize primary sources and established news outlets over secondary reporting.
+    - Cite every single fact, statement, or sentence using [number] notation corresponding to the source from the provided \`context\`.
+    - Integrate citations naturally at the end of sentences or clauses as appropriate. For example, "The breaking news was reported at 3 PM local time[1]."
+    - Ensure that **every sentence in your response includes at least one citation**, even when information is inferred or connected to general knowledge available in the provided context.
+    - Use multiple sources for a single detail if applicable, such as, "The event was confirmed by multiple outlets[1][2][3]."
+    - Always prioritize credibility and accuracy by linking all statements back to their respective context sources.
+    - Avoid citing unsupported assumptions or personal interpretations; if no source supports a statement, clearly indicate the limitation.
 
     ### Special Instructions
     - **Breaking News**: If covering breaking/developing stories, clearly indicate what is confirmed vs. unconfirmed.
