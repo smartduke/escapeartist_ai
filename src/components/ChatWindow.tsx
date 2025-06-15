@@ -245,6 +245,7 @@ const ChatWindow = ({ id }: { id?: string }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialMessage = searchParams.get('q');
+  const templateParam = searchParams.get('template');
   const { user, guestId, guestChatCount, maxGuestChats, canCreateChat, incrementGuestChatCount } = useAuth();
 
   const [chatId, setChatId] = useState<string | undefined>(id);
@@ -290,7 +291,7 @@ const ChatWindow = ({ id }: { id?: string }) => {
   const [files, setFiles] = useState<File[]>([]);
   const [fileIds, setFileIds] = useState<string[]>([]);
 
-  const [focusMode, setFocusMode] = useState('webSearch');
+  const [focusMode, setFocusMode] = useState(templateParam || 'webSearch');
   const [optimizationMode, setOptimizationMode] = useState('speed');
 
   const [isMessagesLoaded, setIsMessagesLoaded] = useState(false);
@@ -586,7 +587,7 @@ const ChatWindow = ({ id }: { id?: string }) => {
       <div>
         {messages.length > 0 ? (
           <>
-            <Navbar chatId={chatId!} messages={messages} />
+            <Navbar chatId={chatId!} messages={messages} focusMode={focusMode} />
             <Chat
               loading={loading}
               messages={messages}

@@ -1,6 +1,7 @@
 import { Clock, Edit, Share, Trash, FileText, FileDown } from 'lucide-react';
 import { Message } from './ChatWindow';
 import { useEffect, useState, Fragment } from 'react';
+import React from 'react';
 import { formatTimeDifference } from '@/lib/utils';
 import DeleteChat from './DeleteChat';
 import {
@@ -12,6 +13,8 @@ import {
 import jsPDF from 'jspdf';
 import { useSidebar } from './SidebarContext';
 import { cn } from '@/lib/utils';
+import { allTemplates } from './MessageInputActions/Focus';
+import { useRouter } from 'next/navigation';
 
 const downloadFile = (filename: string, content: string, type: string) => {
   const blob = new Blob([content], { type });
@@ -123,13 +126,28 @@ const exportAsPDF = (messages: Message[], title: string) => {
 const Navbar = ({
   chatId,
   messages,
+  focusMode,
 }: {
   messages: Message[];
   chatId: string;
+  focusMode?: string;
 }) => {
   const [title, setTitle] = useState<string>('');
   const [timeAgo, setTimeAgo] = useState<string>('');
   const { isExpanded } = useSidebar();
+  const router = useRouter();
+
+  // Get current template info
+  const currentTemplate = allTemplates.find(template => template.key === focusMode);
+  const templateName = currentTemplate?.title || 'All Sources';
+
+  const handleTemplateClick = () => {
+    // Navigate to homepage with template selected
+    const url = focusMode && focusMode !== 'webSearch' 
+      ? `/?template=${focusMode}` 
+      : '/';
+    router.push(url);
+  };
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -167,15 +185,61 @@ const Navbar = ({
       isExpanded ? "lg:pl-[280px]" : "lg:pl-[60px]",
       "px-4 lg:pr-6"
     )}>
-      <a
-        href="/"
-        className="active:scale-95 transition duration-100 cursor-pointer lg:hidden"
-      >
-        <Edit size={17} />
-      </a>
-      <div className="hidden lg:flex flex-row items-center justify-center space-x-2">
-        <Clock size={17} />
-        <p className="text-xs">{timeAgo} ago</p>
+      <div className="flex items-center gap-3 lg:hidden">
+        <a
+          href="/"
+          className="active:scale-95 transition duration-100 cursor-pointer"
+        >
+          <Edit size={17} />
+        </a>
+        
+        {/* Mobile Template Name */}
+        <button
+          onClick={handleTemplateClick}
+          className="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-light-secondary dark:hover:bg-dark-secondary transition-colors"
+          title={`Switch to ${templateName} template`}
+        >
+          {currentTemplate && (
+            <div className="text-blue-600 dark:text-blue-400">
+              {React.cloneElement(currentTemplate.icon as React.ReactElement, { 
+                size: 12, 
+                className: "stroke-[1.5]" 
+              })}
+            </div>
+          )}
+          <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
+            {templateName}
+          </span>
+        </button>
+      </div>
+      <div className="hidden lg:flex flex-row items-center justify-center space-x-4">
+        {/* Template Name */}
+        <button
+          onClick={handleTemplateClick}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-light-secondary dark:hover:bg-dark-secondary transition-colors group"
+          title={`Switch to ${templateName} template`}
+        >
+          {currentTemplate && (
+            <div className="text-blue-600 dark:text-blue-400">
+              {React.cloneElement(currentTemplate.icon as React.ReactElement, { 
+                size: 14, 
+                className: "stroke-[1.5]" 
+              })}
+            </div>
+          )}
+          <span className="text-sm font-medium text-blue-600 dark:text-blue-400 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors">
+            {templateName}
+          </span>
+        </button>
+        
+        {/* Separator */}
+        <div className="w-px h-4 bg-light-200 dark:bg-dark-200" />
+        
+        {/* Time */}
+        <div className="flex items-center gap-2">
+          <Clock size={17} />
+          <p className="text-xs">{timeAgo} ago</p>
+        </div>
       </div>
       <p className="hidden lg:flex">{title}</p>
 
