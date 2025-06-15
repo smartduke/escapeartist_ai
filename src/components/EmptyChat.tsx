@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { useState, useEffect } from 'react';
 import { AuthModal } from '@/components/auth/AuthModal';
+import RecentChats from './RecentChats';
 
 import { allTemplates } from './MessageInputActions/Focus';
 
@@ -147,6 +148,9 @@ const EmptyChat = ({
               </div>
             )}
           </div>
+          
+          {/* Recent Chats */}
+          <RecentChats focusMode={focusMode} />
         </div>
       </div>
       
