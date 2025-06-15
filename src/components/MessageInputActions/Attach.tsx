@@ -54,36 +54,25 @@ const Attach = ({
   };
 
   return loading ? (
-    <div className="flex items-center gap-1.5 px-2 py-1.5">
-      <LoaderCircle size={16} className="text-[#24A0ED] animate-spin" />
-      <p className="text-[#24A0ED] text-xs font-medium">
-        Uploading...
-      </p>
+    <div className="flex items-center justify-center w-9 h-9 rounded-xl">
+      <LoaderCircle size={16} className="text-blue-600 dark:text-blue-400 animate-spin" />
     </div>
   ) : files.length > 0 ? (
-    <Popover className="relative w-full max-w-[15rem] md:max-w-md lg:max-w-lg">
+    <Popover className="relative">
       <PopoverButton
         type="button"
-        className="group flex items-center gap-1.5 px-2 py-1.5 text-[#24A0ED] rounded-lg hover:bg-black/5 dark:hover:bg-white/5 active:scale-95 transition-all duration-200"
+        className="group relative flex items-center justify-center w-9 h-9 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 active:scale-95 transition-all duration-200"
+        title={files.length > 1 ? `${files.length} files attached` : files[0]?.fileName}
       >
-        {files.length > 1 ? (
-          <>
+        <div className="text-blue-600 dark:text-blue-400">
             <File size={16} className="stroke-[1.5]" />
-            <p className="text-xs font-medium whitespace-nowrap">
-              {files.length} files
-            </p>
-          </>
-        ) : (
-          <>
-            <File size={16} className="stroke-[1.5]" />
-            <p className="text-xs font-medium">
-              {files[0].fileName.length > 15
-                ? files[0].fileName.replace(/\.\w+$/, '').substring(0, 12) +
-                  '...' +
-                  files[0].fileExtension
-                : files[0].fileName}
-            </p>
-          </>
+        </div>
+        
+        {/* File count indicator */}
+        {files.length > 1 && (
+          <div className="absolute -top-1 -right-1 w-5 h-5 bg-blue-600 text-white text-xs font-bold rounded-full flex items-center justify-center">
+            {files.length}
+          </div>
         )}
       </PopoverButton>
       <Transition
@@ -162,10 +151,8 @@ const Attach = ({
     <button
       type="button"
       onClick={() => fileInputRef.current.click()}
-      className={cn(
-        'group flex items-center gap-1.5 text-black/50 dark:text-white/50 hover:text-black dark:hover:text-white transition-colors',
-        showText ? 'px-2 py-1.5' : 'p-2'
-      )}
+      className="group relative flex items-center justify-center w-9 h-9 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 active:scale-95 transition-all duration-200"
+      title="Attach files"
     >
       <input
         type="file"
@@ -175,8 +162,9 @@ const Attach = ({
         multiple
         hidden
       />
+      <div className="text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-100 transition-colors">
       <Paperclip size={16} className="stroke-[1.5]" />
-      {showText && <span className="text-xs font-medium">Attach</span>}
+      </div>
     </button>
   );
 };

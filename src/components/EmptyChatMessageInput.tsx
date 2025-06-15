@@ -143,10 +143,10 @@ const EmptyChatMessageInput = ({
         <div className="flex flex-row items-center justify-between mt-4">
           <div className="flex flex-row items-center space-x-2 lg:space-x-4">
             <div className="flex items-center gap-2">
-                          <Focus
-              focusMode={focusMode}
-              setFocusMode={setFocusMode}
-              onTemplateSelect={() => {
+              <Focus
+                focusMode={focusMode}
+                setFocusMode={setFocusMode}
+                onTemplateSelect={() => {
                   // Use requestAnimationFrame to ensure DOM is updated
                   requestAnimationFrame(() => {
                     if (inputRef.current) {
@@ -155,21 +155,20 @@ const EmptyChatMessageInput = ({
                   });
                 }}
               />
-              <Attach
-                fileIds={fileIds}
-                setFileIds={setFileIds}
-                files={files}
-                setFiles={setFiles}
-                showText
+              <Optimization
+                optimizationMode={optimizationMode}
+                setOptimizationMode={setOptimizationMode}
               />
-              <ModelSelector />
             </div>
           </div>
           <div className="flex flex-row items-center space-x-1 sm:space-x-4">
-            <Optimization
-              optimizationMode={optimizationMode}
-              setOptimizationMode={setOptimizationMode}
+            <Attach
+              fileIds={fileIds}
+              setFileIds={setFileIds}
+              files={files}
+              setFiles={setFiles}
             />
+            <ModelSelector />
             <button
               disabled={message.trim().length === 0}
               className={cn(

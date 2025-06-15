@@ -38,17 +38,17 @@ import {
   DialogPanel,
   Transition,
 } from '@headlessui/react';
-import { Fragment, useState } from 'react';
+import React, { Fragment, useState } from 'react';
 
 const templateCategories = [
   {
     name: 'Research',
     icon: '🔍',
     templates: [
-      {
-        key: 'webSearch',
-        title: 'All Sources',
-        description: 'Searches across all of the internet',
+  {
+    key: 'webSearch',
+    title: 'All Sources',
+    description: 'Searches across all of the internet',
         icon: <Globe2 size={16} className="stroke-[1.5]" />,
       },
       {
@@ -416,10 +416,10 @@ const templateCategories = [
           'DIY and craft project tutorials',
           'Music and instrument learning videos'
         ]
-      },
-      {
-        key: 'redditSearch',
-        title: 'Reddit',
+  },
+  {
+    key: 'redditSearch',
+    title: 'Reddit',
         description: 'Discussions and opinions',
         icon: <MessageCircle size={16} className="stroke-[1.5]" />,
         greeting: 'Explore Reddit discussions and insights!',
@@ -494,27 +494,35 @@ const Focus = ({
   
   return (
     <>
-      <button
+      {currentTemplate ? (
+        <button
         type="button"
-        onClick={() => setIsOpen(true)}
-        className="group flex items-center gap-1.5 px-2 py-1.5 text-black/50 dark:text-white/50 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 active:scale-95 transition-all duration-200 hover:text-black dark:hover:text-white"
-      >
-        {currentTemplate ? (
-          <>
-            {currentTemplate.icon}
-            <p className="text-xs font-medium hidden lg:block">
-              {currentTemplate.title}
-            </p>
-            <ChevronDown size={14} className="opacity-50 group-hover:opacity-100 transition-opacity" />
-          </>
-        ) : (
-          <>
-            <Target size={14} className="stroke-[1.5]" />
-            <p className="text-xs font-medium hidden lg:block">Templates</p>
-            <ChevronDown size={14} className="opacity-50 group-hover:opacity-100 transition-opacity" />
-          </>
-        )}
-      </button>
+          onClick={() => setIsOpen(true)}
+          className="group flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 active:scale-95 transition-all duration-200"
+          title={currentTemplate.title}
+        >
+          <div className="text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-100 transition-colors">
+            {React.cloneElement(currentTemplate.icon as React.ReactElement, { 
+              size: 16, 
+              className: "stroke-[1.5]" 
+            })}
+          </div>
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-100 transition-colors">
+            {currentTemplate.title}
+          </span>
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setIsOpen(true)}
+          className="group relative flex items-center justify-center w-9 h-9 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 active:scale-95 transition-all duration-200"
+          title="Choose Template"
+        >
+          <div className="text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-100 transition-colors">
+            <Target size={16} className="stroke-[1.5]" />
+          </div>
+        </button>
+      )}
 
       <Transition appear show={isOpen} as={Fragment}>
         <Dialog as="div" className="relative z-50" onClose={setIsOpen}>
@@ -533,7 +541,7 @@ const Focus = ({
           <div className="fixed inset-0 overflow-y-auto">
             <div className="flex min-h-full items-center justify-center p-4">
               <Transition.Child
-                as={Fragment}
+        as={Fragment}
                 enter="ease-out duration-300"
                 enterFrom="opacity-0 scale-95"
                 enterTo="opacity-100 scale-100"
@@ -569,29 +577,29 @@ const Focus = ({
                     {/* Search Bar and Category Filter */}
                     <div className="px-6 pb-4 space-y-4">
                       <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-black/40 dark:text-white/40" size={16} />
+                        <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" size={18} />
                         <input
                           type="text"
                           placeholder="Search templates..."
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
-                          className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-black/10 dark:border-white/10 bg-white/50 dark:bg-black/20 backdrop-blur-sm text-black dark:text-white placeholder-black/40 dark:placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/30 transition-all"
+                          className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200/60 dark:border-gray-700/60 bg-white/70 dark:bg-gray-800/50 backdrop-blur-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 transition-all duration-200 shadow-sm hover:shadow-md font-medium"
                         />
                       </div>
                       
                       {/* Category Filter */}
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <div className="flex items-center gap-1 text-black/60 dark:text-white/60">
-                          <Filter size={14} />
-                          <span className="text-sm font-medium">Filter:</span>
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                          <Filter size={16} className="stroke-[1.5]" />
+                          <span className="text-sm font-semibold">Categories</span>
                         </div>
                         <button
                           onClick={() => setSelectedCategory('all')}
                           className={cn(
-                            'px-3 py-1.5 rounded-lg text-sm font-medium transition-all',
+                            'px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 backdrop-blur-sm',
                             selectedCategory === 'all'
-                              ? 'bg-blue-500 text-white shadow-sm'
-                              : 'bg-black/5 dark:bg-white/5 text-black/70 dark:text-white/70 hover:bg-black/10 dark:hover:bg-white/10'
+                              ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/25'
+                              : 'bg-white/60 dark:bg-gray-800/40 border border-gray-200/40 dark:border-gray-700/40 text-gray-700 dark:text-gray-300 hover:bg-white/80 dark:hover:bg-gray-800/60 hover:border-gray-300/60 dark:hover:border-gray-600/60 hover:shadow-md'
                           )}
                         >
                           All
@@ -601,13 +609,13 @@ const Focus = ({
                             key={category.name}
                             onClick={() => setSelectedCategory(category.name)}
                             className={cn(
-                              'px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5',
+                              'px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center gap-2 backdrop-blur-sm',
                               selectedCategory === category.name
-                                ? 'bg-blue-500 text-white shadow-sm'
-                                : 'bg-black/5 dark:bg-white/5 text-black/70 dark:text-white/70 hover:bg-black/10 dark:hover:bg-white/10'
+                                ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/25'
+                                : 'bg-white/60 dark:bg-gray-800/40 border border-gray-200/40 dark:border-gray-700/40 text-gray-700 dark:text-gray-300 hover:bg-white/80 dark:hover:bg-gray-800/60 hover:border-gray-300/60 dark:hover:border-gray-600/60 hover:shadow-md'
                             )}
                           >
-                            <span>{category.icon}</span>
+                            <span className="text-base">{category.icon}</span>
                             <span>{category.name}</span>
                           </button>
                         ))}
@@ -633,38 +641,41 @@ const Focus = ({
                               <button
                                 onClick={() => handleTemplateSelect(template.key)}
                                 key={template.key}
-                                className={cn(
-                                  'group relative flex flex-col items-center gap-3 p-6 rounded-xl transition-all duration-200 text-center border',
+                className={cn(
+                                  'group relative flex flex-col items-center gap-4 p-5 rounded-2xl transition-all duration-300 text-center border backdrop-blur-sm',
                                   focusMode === template.key
-                                    ? 'bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/30 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 shadow-lg shadow-blue-500/10'
-                                    : 'bg-white/50 dark:bg-white/5 border-black/10 dark:border-white/10 hover:bg-white/80 dark:hover:bg-white/10 hover:border-black/20 dark:hover:border-white/20 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-white/5 text-black dark:text-white',
-                                )}
-                              >
-                                <div className={cn(
-                                  'flex items-center justify-center w-12 h-12 rounded-xl transition-all duration-200',
+                                    ? 'bg-gradient-to-br from-blue-50/80 to-indigo-50/80 dark:from-blue-950/30 dark:to-indigo-950/30 border-blue-200/60 dark:border-blue-700/60 text-blue-700 dark:text-blue-300 shadow-xl shadow-blue-500/10 scale-105'
+                                    : 'bg-white/60 dark:bg-gray-800/40 border-gray-200/40 dark:border-gray-700/40 hover:bg-white/80 dark:hover:bg-gray-800/60 hover:border-gray-300/60 dark:hover:border-gray-600/60 hover:shadow-xl hover:shadow-black/5 dark:hover:shadow-white/5 hover:scale-105 text-gray-700 dark:text-gray-300',
+                )}
+              >
+                <div className={cn(
+                                  'flex items-center justify-center w-14 h-14 rounded-2xl transition-all duration-300 shadow-sm',
                                   focusMode === template.key
-                                    ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/25'
-                                    : 'bg-black/5 dark:bg-white/10 text-black/70 dark:text-white/70 group-hover:bg-black/10 dark:group-hover:bg-white/20',
+                                    ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/25'
+                                    : 'bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 text-gray-600 dark:text-gray-400 group-hover:from-gray-200 group-hover:to-gray-300 dark:group-hover:from-gray-600 dark:group-hover:to-gray-700 group-hover:text-gray-700 dark:group-hover:text-gray-300',
                                 )}>
-                                  {template.icon}
-                                </div>
-                                <div className="space-y-1">
-                                  <p className="font-medium text-sm leading-tight">
+                                  {React.cloneElement(template.icon as React.ReactElement, { 
+                                    size: 18, 
+                                    className: "stroke-[1.5]" 
+                                  })}
+                </div>
+                                <div className="space-y-1.5">
+                                  <p className="font-semibold text-sm leading-tight">
                                     {template.title}
                                   </p>
-                                  <p className={cn(
-                                    "text-xs leading-relaxed line-clamp-2",
+                  <p className={cn(
+                                    "text-xs leading-relaxed line-clamp-2 font-medium",
                                     focusMode === template.key
-                                      ? 'text-blue-600/80 dark:text-blue-400/80'
-                                      : 'text-black/60 dark:text-white/60'
+                                      ? 'text-blue-600/70 dark:text-blue-400/70'
+                                      : 'text-gray-500 dark:text-gray-400'
                                   )}>
                                     {template.description}
-                                  </p>
-                                </div>
+                  </p>
+                </div>
                                 {focusMode === template.key && (
-                                  <div className="absolute top-2 right-2">
-                                    <div className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-500 text-white">
-                                      <Check size={12} />
+                                  <div className="absolute top-3 right-3">
+                                    <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/25">
+                                      <Check size={14} className="stroke-[2]" />
                                     </div>
                                   </div>
                                 )}

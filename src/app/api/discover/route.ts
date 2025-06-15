@@ -49,15 +49,15 @@ export const GET = async (req: Request) => {
               const topic = topics[i % topics.length];
               
               try {
-                return (
-                  await searchSearxng(
+              return (
+                await searchSearxng(
                     `site:${website} ${topic}`,
-                    {
-                      engines: ['bing news'],
-                      pageno: 1,
-                    },
-                  )
-                ).results;
+                  {
+                    engines: ['bing news'],
+                    pageno: 1,
+                  },
+                )
+              ).results;
               } catch (error) {
                 console.error(`Error searching ${website} for ${topic}:`, error);
                 return [];
@@ -72,12 +72,12 @@ export const GET = async (req: Request) => {
         .slice(0, 12); // Limit to 12 articles per category
     } else {
       try {
-        data = (
-          await searchSearxng(
-            `site:${articleWebsites[Math.floor(Math.random() * articleWebsites.length)]} ${topics[Math.floor(Math.random() * topics.length)]}`,
-            { engines: ['bing news'], pageno: 1 },
-          )
-        ).results;
+      data = (
+        await searchSearxng(
+          `site:${articleWebsites[Math.floor(Math.random() * articleWebsites.length)]} ${topics[Math.floor(Math.random() * topics.length)]}`,
+          { engines: ['bing news'], pageno: 1 },
+        )
+      ).results;
       } catch (error) {
         console.error('Error in preview mode:', error);
         data = [];

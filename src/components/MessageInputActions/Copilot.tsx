@@ -9,34 +9,31 @@ const CopilotToggle = ({
   setCopilotEnabled: (enabled: boolean) => void;
 }) => {
   return (
-    <div className="group flex flex-row items-center space-x-1 active:scale-95 duration-200 transition cursor-pointer">
+    <button
+      type="button"
+      onClick={() => setCopilotEnabled(!copilotEnabled)}
+      className="group relative flex items-center justify-center w-9 h-9 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 active:scale-95 transition-all duration-200"
+      title={copilotEnabled ? "Copilot enabled" : "Copilot disabled"}
+    >
       <Switch
         checked={copilotEnabled}
         onChange={setCopilotEnabled}
-        className="bg-light-secondary dark:bg-dark-secondary border border-light-200/70 dark:border-dark-200 relative inline-flex h-5 w-10 sm:h-6 sm:w-11 items-center rounded-full"
+        className={cn(
+          "relative inline-flex h-5 w-9 items-center rounded-full transition-all duration-200",
+          copilotEnabled
+            ? "bg-blue-600"
+            : "bg-gray-300 dark:bg-gray-600"
+        )}
       >
         <span className="sr-only">Copilot</span>
         <span
           className={cn(
-            copilotEnabled
-              ? 'translate-x-6 bg-[#24A0ED]'
-              : 'translate-x-1 bg-black/50 dark:bg-white/50',
-            'inline-block h-3 w-3 sm:h-4 sm:w-4 transform rounded-full transition-all duration-200',
+            "inline-block h-3 w-3 transform rounded-full bg-white shadow-sm transition-all duration-200",
+            copilotEnabled ? "translate-x-5" : "translate-x-1"
           )}
         />
       </Switch>
-      <p
-        onClick={() => setCopilotEnabled(!copilotEnabled)}
-        className={cn(
-          'text-xs font-medium transition-colors duration-150 ease-in-out',
-          copilotEnabled
-            ? 'text-[#24A0ED]'
-            : 'text-black/50 dark:text-white/50 group-hover:text-black dark:group-hover:text-white',
-        )}
-      >
-        Copilot
-      </p>
-    </div>
+    </button>
   );
 };
 
