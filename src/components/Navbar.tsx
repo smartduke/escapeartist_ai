@@ -146,7 +146,7 @@ const Navbar = ({
     const url = focusMode && focusMode !== 'webSearch' 
       ? `/?template=${focusMode}` 
       : '/';
-    router.push(url);
+    window.location.href = url;
   };
 
   useEffect(() => {

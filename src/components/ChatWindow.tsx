@@ -319,7 +319,8 @@ const ChatWindow = ({ id }: { id?: string }) => {
       // Only create new chat ID if we're on the home page (no id prop)
       setNewChatCreated(true);
       setIsMessagesLoaded(true);
-      setChatId(crypto.randomBytes(20).toString('hex'));
+      const newChatId = crypto.randomBytes(20).toString('hex');
+      setChatId(newChatId);
     } else if (id) {
       // If we have an id prop but no chatId state, set it
       setChatId(id);
@@ -397,6 +398,14 @@ const ChatWindow = ({ id }: { id?: string }) => {
             },
           ]);
           added = true;
+          
+          // Update URL without page refresh if we're starting a new chat from homepage
+          // This happens after we get the first response, ensuring the chat exists
+          if (newChatCreated && messages.length === 0) {
+            const templateParam = focusMode !== 'webSearch' ? `?template=${focusMode}` : '';
+            const newUrl = `/c/${chatId}${templateParam}`;
+            window.history.replaceState(null, '', newUrl);
+          }
         }
         setMessageAppeared(true);
       }
@@ -415,6 +424,14 @@ const ChatWindow = ({ id }: { id?: string }) => {
             },
           ]);
           added = true;
+          
+          // Update URL without page refresh if we're starting a new chat from homepage
+          // This happens after we get the first response, ensuring the chat exists
+          if (newChatCreated && messages.length === 0) {
+            const templateParam = focusMode !== 'webSearch' ? `?template=${focusMode}` : '';
+            const newUrl = `/c/${chatId}${templateParam}`;
+            window.history.replaceState(null, '', newUrl);
+          }
         }
 
         setMessages((prev) =>
