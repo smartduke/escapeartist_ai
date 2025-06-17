@@ -3,7 +3,6 @@ import { ArrowUp } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
 import Attach from './MessageInputActions/Attach';
-import CopilotToggle from './MessageInputActions/Copilot';
 import ModelSelector from './MessageInputActions/ModelSelector';
 import { File } from './ChatWindow';
 import AttachSmall from './MessageInputActions/AttachSmall';
@@ -23,7 +22,6 @@ const MessageInput = ({
   files: File[];
   setFiles: (files: File[]) => void;
 }) => {
-  const [copilotEnabled, setCopilotEnabled] = useState(false);
   const [message, setMessage] = useState('');
   const [textareaRows, setTextareaRows] = useState(1);
   const [mode, setMode] = useState<'multi' | 'single'>('single');
@@ -101,10 +99,6 @@ const MessageInput = ({
       {mode === 'single' && (
         <div className="flex flex-row items-center space-x-4">
           <ModelSelector />
-          <CopilotToggle
-            copilotEnabled={copilotEnabled}
-            setCopilotEnabled={setCopilotEnabled}
-          />
           <button
             disabled={message.trim().length === 0 || loading}
             className="bg-[#24A0ED] text-white disabled:text-black/50 dark:disabled:text-white/50 hover:bg-opacity-85 transition duration-100 disabled:bg-[#e0e0dc79] dark:disabled:bg-[#ececec21] rounded-full p-2"
@@ -125,10 +119,6 @@ const MessageInput = ({
             <ModelSelector />
           </div>
           <div className="flex flex-row items-center space-x-4">
-            <CopilotToggle
-              copilotEnabled={copilotEnabled}
-              setCopilotEnabled={setCopilotEnabled}
-            />
             <button
               disabled={message.trim().length === 0 || loading}
               className="bg-[#24A0ED] text-white text-black/50 dark:disabled:text-white/50 hover:bg-opacity-85 transition duration-100 disabled:bg-[#e0e0dc79] dark:disabled:bg-[#ececec21] rounded-full p-2"

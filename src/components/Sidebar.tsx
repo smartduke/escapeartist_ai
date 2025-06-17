@@ -76,9 +76,16 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
         });
 
         const data = await res.json();
-        setChats(data.chats);
+        
+        if (res.ok && data.chats && Array.isArray(data.chats)) {
+          setChats(data.chats);
+        } else {
+          console.error('Failed to fetch chats:', data.message || 'Unknown error');
+          setChats([]);
+        }
       } catch (error) {
         console.error('Error fetching chats:', error);
+        setChats([]);
       } finally {
         setLoading(false);
       }
@@ -300,7 +307,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
               <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
                 {loading ? (
                   <div className="text-center text-sm text-black/50 dark:text-white/70 transition-all duration-300 ease-in-out whitespace-nowrap">Loading...</div>
-                ) : chats.length === 0 ? (
+                ) : !chats || chats.length === 0 ? (
                   <div className="text-center text-sm text-black/50 dark:text-white/70 transition-all duration-300 ease-in-out whitespace-nowrap">No chats yet</div>
                 ) : (
                   chats.map((chat) => (

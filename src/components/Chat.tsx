@@ -16,6 +16,7 @@ const Chat = ({
   setFileIds,
   files,
   setFiles,
+  onMessageUpdate,
 }: {
   messages: Message[];
   sendMessage: (message: string) => void;
@@ -26,10 +27,27 @@ const Chat = ({
   setFileIds: (fileIds: string[]) => void;
   files: File[];
   setFiles: (files: File[]) => void;
+  onMessageUpdate?: (messageId: string, newContent: string) => void;
 }) => {
   const [dividerWidth, setDividerWidth] = useState(0);
   const dividerRef = useRef<HTMLDivElement | null>(null);
   const messageEnd = useRef<HTMLDivElement | null>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+
+  const handleEditStart = (messageId: string) => {
+    setEditingMessageId(messageId);
+  };
+
+  const handleEditEnd = () => {
+    setEditingMessageId(null);
+  };
+
+  const handleMessageUpdateWithEditEnd = (messageId: string, newContent: string) => {
+    if (onMessageUpdate) {
+      onMessageUpdate(messageId, newContent);
+    }
+    setEditingMessageId(null);
+  };
 
   useEffect(() => {
     const updateDividerWidth = () => {
@@ -78,6 +96,10 @@ const Chat = ({
               isLast={isLast}
               rewrite={rewrite}
               sendMessage={sendMessage}
+              onMessageUpdate={handleMessageUpdateWithEditEnd}
+              isEditing={editingMessageId === msg.messageId}
+              onEditStart={() => handleEditStart(msg.messageId)}
+              onEditEnd={handleEditEnd}
             />
             {!isLast && msg.role === 'assistant' && (
               <div className="h-px w-full bg-light-secondary dark:bg-dark-secondary" />

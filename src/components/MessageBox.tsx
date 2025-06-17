@@ -11,10 +11,12 @@ import {
   StopCircle,
   Layers3,
   Plus,
+  Edit3,
 } from 'lucide-react';
 import Markdown, { MarkdownToJSX } from 'markdown-to-jsx';
 import Copy from './MessageActions/Copy';
 import Rewrite from './MessageActions/Rewrite';
+import RichTextEditor from './MessageActions/RichTextEditor';
 import MessageSources from './MessageSources';
 import SearchImages from './SearchImages';
 import SearchVideos from './SearchVideos';
@@ -34,6 +36,10 @@ const MessageBox = ({
   isLast,
   rewrite,
   sendMessage,
+  onMessageUpdate,
+  isEditing,
+  onEditStart,
+  onEditEnd,
 }: {
   message: Message;
   messageIndex: number;
@@ -43,6 +49,10 @@ const MessageBox = ({
   isLast: boolean;
   rewrite: (messageId: string) => void;
   sendMessage: (message: string) => void;
+  onMessageUpdate?: (messageId: string, newContent: string) => void;
+  isEditing?: boolean;
+  onEditStart?: () => void;
+  onEditEnd?: () => void;
 }) => {
   const [parsedMessage, setParsedMessage] = useState(message.content);
   const [speechMessage, setSpeechMessage] = useState(message.content);
@@ -164,15 +174,25 @@ const MessageBox = ({
                 </h3>
               </div>
 
-              <Markdown
-                className={cn(
-                  'prose prose-h1:mb-3 prose-h2:mb-2 prose-h2:mt-6 prose-h2:font-[800] prose-h3:mt-4 prose-h3:mb-1.5 prose-h3:font-[600] dark:prose-invert prose-p:leading-relaxed prose-pre:p-0 font-[400]',
-                  'max-w-none break-words text-black dark:text-white',
-                )}
-                options={markdownOverrides}
-              >
-                {parsedMessage}
-              </Markdown>
+              {isEditing && onMessageUpdate ? (
+                <RichTextEditor
+                  messageId={message.messageId}
+                  initialContent={message.content}
+                  onUpdate={onMessageUpdate}
+                  onEditStart={onEditStart}
+                  onEditEnd={onEditEnd}
+                />
+              ) : (
+                <Markdown
+                  className={cn(
+                    'prose prose-h1:mb-3 prose-h2:mb-2 prose-h2:mt-6 prose-h2:font-[800] prose-h3:mt-4 prose-h3:mb-1.5 prose-h3:font-[600] dark:prose-invert prose-p:leading-relaxed prose-pre:p-0 font-[400]',
+                    'max-w-none break-words text-black dark:text-white',
+                  )}
+                  options={markdownOverrides}
+                >
+                  {parsedMessage}
+                </Markdown>
+              )}
               {loading && isLast ? null : (
                 <div className="flex flex-row items-center justify-between w-full text-black dark:text-white py-4 -mx-2">
                   <div className="flex flex-row items-center space-x-1">
@@ -180,6 +200,15 @@ const MessageBox = ({
                       <Share size={18} />
                     </button> */}
                     <Rewrite rewrite={rewrite} messageId={message.messageId} />
+                    {onEditStart && !isEditing && (
+                      <button
+                        onClick={onEditStart}
+                        className="p-2 text-black/70 dark:text-white/70 rounded-xl hover:bg-light-secondary dark:hover:bg-dark-secondary transition duration-200 hover:text-black dark:hover:text-white"
+                        title="Edit message"
+                      >
+                        <Edit3 size={18} />
+                      </button>
+                    )}
                   </div>
                   <div className="flex flex-row items-center space-x-1">
                     <Copy initialMessage={message.content} message={message} />

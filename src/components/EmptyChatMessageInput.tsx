@@ -1,7 +1,6 @@
 import { ArrowRight, Command } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
-import CopilotToggle from './MessageInputActions/Copilot';
 import Focus, { allTemplates } from './MessageInputActions/Focus';
 import Optimization from './MessageInputActions/Optimization';
 import Attach from './MessageInputActions/Attach';
@@ -36,7 +35,6 @@ const EmptyChatMessageInput = ({
   onTextareaRef?: (ref: HTMLTextAreaElement | null) => void;
   showQuickPrompts?: boolean;
 }) => {
-  const [copilotEnabled, setCopilotEnabled] = useState(false);
   const [message, setMessage] = useState('');
 
   const inputRef = useRef<HTMLTextAreaElement | null>(null);

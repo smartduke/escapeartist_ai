@@ -573,6 +573,17 @@ const ChatWindow = ({ id }: { id?: string }) => {
     sendMessage(message.content, message.messageId);
   };
 
+  const handleMessageUpdate = (messageId: string, newContent: string) => {
+    setMessages((prev) =>
+      prev.map((msg) => {
+        if (msg.messageId === messageId) {
+          return { ...msg, content: newContent };
+        }
+        return msg;
+      })
+    );
+  };
+
   useEffect(() => {
     if (isReady && initialMessage && isConfigReady) {
       sendMessage(initialMessage);
@@ -615,6 +626,7 @@ const ChatWindow = ({ id }: { id?: string }) => {
               setFileIds={setFileIds}
               files={files}
               setFiles={setFiles}
+              onMessageUpdate={handleMessageUpdate}
             />
           </>
         ) : (
