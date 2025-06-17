@@ -8,11 +8,11 @@ export const PATCH = async (
 ) => {
   try {
     const { id } = await params;
-    const { content } = await req.json();
+    const { content, suggestions } = await req.json();
 
-    if (!content) {
+    if (!content && !suggestions) {
       return Response.json(
-        { message: 'Content is required' },
+        { message: 'Content or suggestions is required' },
         { status: 400 },
       );
     }
@@ -25,9 +25,29 @@ export const PATCH = async (
       return Response.json({ message: 'Message not found' }, { status: 404 });
     }
 
+    // Parse existing metadata or create new one
+    let metadata = {};
+    try {
+      metadata = messageExists.metadata ? JSON.parse(messageExists.metadata as string) : {};
+    } catch (e) {
+      metadata = {};
+    }
+
+    // Update content if provided
+    const updateData: any = {};
+    if (content) {
+      updateData.content = content;
+    }
+
+    // Update suggestions in metadata if provided
+    if (suggestions) {
+      metadata = { ...metadata, suggestions };
+      updateData.metadata = JSON.stringify(metadata);
+    }
+
     await db
       .update(messages)
-      .set({ content })
+      .set(updateData)
       .where(eq(messages.messageId, id))
       .execute();
 

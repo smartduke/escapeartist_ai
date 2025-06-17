@@ -489,6 +489,19 @@ const ChatWindow = ({ id }: { id?: string }) => {
               return msg;
             }),
           );
+
+          // Save suggestions to database
+          try {
+            await fetch(`/api/messages/${lastMsg.messageId}`, {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ suggestions: suggestions }),
+            });
+          } catch (error) {
+            console.error('Failed to save suggestions to database:', error);
+          }
         }
       }
     };
