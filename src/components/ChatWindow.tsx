@@ -209,9 +209,27 @@ const loadMessages = async (
   const data = await res.json();
 
   const messages = data.messages.map((msg: any) => {
+    const parsedMetadata = typeof msg.metadata === 'string' ? JSON.parse(msg.metadata) : msg.metadata;
+    
+    // Debug: Log what's in the metadata for assistant messages
+    if (msg.role === 'assistant') {
+      console.log('Assistant message metadata:', {
+        messageId: msg.messageId,
+        hasMetadata: !!msg.metadata,
+        metadataType: typeof msg.metadata,
+        parsedMetadata,
+        hasSources: !!parsedMetadata?.sources,
+        sourcesLength: parsedMetadata?.sources?.length || 0
+      });
+    }
+    
+    // Ensure createdAt is a Date object
+    const createdAt = msg.createdAt ? new Date(msg.createdAt) : new Date();
+    
     return {
       ...msg,
-      ...(typeof msg.metadata === 'string' ? JSON.parse(msg.metadata) : msg.metadata),
+      ...parsedMetadata,
+      createdAt,
     };
   }) as Message[];
 
@@ -449,6 +467,8 @@ const ChatWindow = ({ id }: { id?: string }) => {
       }
 
       if (data.type === 'messageEnd') {
+        console.log('MessageEnd triggered!');
+
         setChatHistory((prevHistory) => [
           ...prevHistory,
           ['human', message],
@@ -474,13 +494,24 @@ const ChatWindow = ({ id }: { id?: string }) => {
             ?.click();
         }
 
+        console.log('Suggestions check - lastMsg:', {
+          messageId: lastMsg.messageId,
+          role: lastMsg.role,
+          hasSources: !!(lastMsg.sources),
+          sourcesLength: lastMsg.sources?.length || 0,
+          hasSuggestions: !!(lastMsg.suggestions),
+          suggestionsLength: lastMsg.suggestions?.length || 0
+        });
+
         if (
           lastMsg.role === 'assistant' &&
           lastMsg.sources &&
           lastMsg.sources.length > 0 &&
           !lastMsg.suggestions
         ) {
+          console.log('Generating suggestions for message:', lastMsg.messageId);
           const suggestions = await getSuggestions(messagesRef.current);
+          console.log('Generated suggestions:', suggestions);
           setMessages((prev) =>
             prev.map((msg) => {
               if (msg.messageId === lastMsg.messageId) {
@@ -492,6 +523,7 @@ const ChatWindow = ({ id }: { id?: string }) => {
 
           // Save suggestions to database
           try {
+            console.log('Saving suggestions to database for message:', lastMsg.messageId);
             await fetch(`/api/messages/${lastMsg.messageId}`, {
               method: 'PATCH',
               headers: {
@@ -499,9 +531,12 @@ const ChatWindow = ({ id }: { id?: string }) => {
               },
               body: JSON.stringify({ suggestions: suggestions }),
             });
+            console.log('Suggestions saved successfully');
           } catch (error) {
             console.error('Failed to save suggestions to database:', error);
           }
+        } else {
+          console.log('Suggestions condition not met');
         }
       }
     };

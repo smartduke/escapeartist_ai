@@ -114,16 +114,27 @@ const handleEmitterEvents = async (
     writer.close();
 
     // Save the message to database
+    const metadata = {
+      createdAt: new Date(),
+      ...(sources && sources.length > 0 && { sources }),
+    };
+    
+    // Debug: Log what we're saving
+    console.log('Saving message to DB:', {
+      messageId: aiMessageId,
+      chatId: chatId,
+      hasSources: !!sources,
+      sourcesLength: sources?.length || 0,
+      metadata: metadata
+    });
+    
     await db.insert(messagesSchema)
       .values({
         content: recievedMessage,
         chatId: chatId,
         messageId: aiMessageId,
         role: 'assistant',
-        metadata: JSON.stringify({
-          createdAt: new Date(),
-          ...(sources && sources.length > 0 && { sources }),
-        }),
+        metadata: metadata,
       })
       .execute();
 
@@ -195,9 +206,9 @@ const handleHistorySave = async (
         chatId: message.chatId,
         messageId: humanMessageId,
         role: 'user',
-        metadata: JSON.stringify({
+        metadata: {
           createdAt: new Date(),
-        }),
+        },
       })
       .execute();
   } else {

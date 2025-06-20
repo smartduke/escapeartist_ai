@@ -3,7 +3,7 @@
 import { 
   Edit3, Save, X, Bold, Italic, List, ListOrdered, Link, Quote, Code, 
   Undo, Redo, Underline, Strikethrough, AlignLeft, AlignCenter, AlignRight,
-  Image
+  Image, Video, BookCopy
 } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
@@ -14,18 +14,48 @@ const RichTextEditor = ({
   onUpdate,
   onEditStart,
   onEditEnd,
+  message,
+  history,
 }: {
   messageId: string;
   initialContent: string;
   onUpdate: (messageId: string, newContent: string) => void;
   onEditStart?: () => void;
   onEditEnd?: () => void;
+  message?: any;
+  history?: any[];
 }) => {
   const [editorContent, setEditorContent] = useState('');
   const [loading, setLoading] = useState(false);
   const [undoStack, setUndoStack] = useState<string[]>([]);
   const [redoStack, setRedoStack] = useState<string[]>([]);
+  const [showImageSelector, setShowImageSelector] = useState(false);
+  const [availableImages, setAvailableImages] = useState<any[]>([]);
+  const [imageLoading, setImageLoading] = useState(false);
+  const [showVideoSelector, setShowVideoSelector] = useState(false);
+  const [availableVideos, setAvailableVideos] = useState<any[]>([]);
+  const [videoLoading, setVideoLoading] = useState(false);
+  const [savedSelection, setSavedSelection] = useState<Range | null>(null);
+  const [showCitationSelector, setShowCitationSelector] = useState(false);
   const editorRef = useRef<HTMLDivElement>(null);
+
+  // Save current cursor position
+  const saveSelection = () => {
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      setSavedSelection(selection.getRangeAt(0).cloneRange());
+    }
+  };
+
+  // Restore saved cursor position
+  const restoreSelection = () => {
+    if (savedSelection && editorRef.current) {
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(savedSelection);
+      editorRef.current.focus();
+    }
+  };
 
   // Convert markdown to HTML for WYSIWYG editing
   const markdownToHtml = (markdown: string) => {
@@ -43,8 +73,21 @@ const RichTextEditor = ({
       .replace(/~~(.*?)~~/g, '<del>$1</del>')
       // Code
       .replace(/`(.*?)`/g, '<code>$1</code>')
-      // Images (must come before links)
-      .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width: 100%; height: auto;" />')
+      // Iframes (for videos - must come before images)
+      .replace(/<iframe([^>]+)><\/iframe>/g, '<iframe$1></iframe>');
+
+    // Handle images with source links (must come before regular images)
+    html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)\n\*Source: \[([^\]]*)\]\(([^)]+)\)\*/g, 
+      '<div style="display: block; margin: 1em 0;"><img src="$2" alt="$1" style="max-width: 100%; height: auto; display: block; border-radius: 8px;" /><div style="font-size: 12px; color: #666; margin-top: 4px;">Source: <a href="$4" target="_blank" rel="noopener noreferrer" style="color: #3b82f6; text-decoration: underline;">$3</a></div></div>');
+
+    // Handle regular images - using a more robust pattern for all types of URLs including base64
+    html = html.replace(/!\[([^\]]*)\]\(([^)]*)\)/g, (match, alt, src) => {
+      // Make sure we have valid src
+      if (!src) return match;
+      return `<img src="${src}" alt="${alt}" style="max-width: 100%; height: auto;" />`;
+    });
+
+    html = html
       // Links
       .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
       // Lists
@@ -118,7 +161,16 @@ const RichTextEditor = ({
           case 'img':
             const src = element.getAttribute('src') || '';
             const alt = element.getAttribute('alt') || '';
-            return `![${alt}](${src})`;
+            // Handle both regular images and base64 images
+            if (src) {
+              return `![${alt}](${src})`;
+            }
+            return '';
+          case 'iframe':
+            const iframeSrc = element.getAttribute('src') || '';
+            const width = element.getAttribute('width') || '560';
+            const height = element.getAttribute('height') || '315';
+            return `<iframe src="${iframeSrc}" width="${width}" height="${height}" frameborder="0" allowfullscreen></iframe>\n\n`;
           case 'blockquote':
             return `> ${childContent}\n\n`;
           case 'ul':
@@ -141,6 +193,18 @@ const RichTextEditor = ({
           case 'pre':
             return `\`\`\`\n${childContent}\n\`\`\`\n\n`;
           case 'div':
+            // Check if this is an image container with source link
+            const hasImg = element.querySelector('img');
+            const hasSourceLink = element.querySelector('a[href]');
+            if (hasImg && hasSourceLink) {
+              const img = hasImg as HTMLImageElement;
+              const link = hasSourceLink as HTMLAnchorElement;
+              const src = img.getAttribute('src') || '';
+              const alt = img.getAttribute('alt') || '';
+              const sourceUrl = link.getAttribute('href') || '';
+              const websiteName = link.textContent || 'View source';
+              return `![${alt}](${src})\n*Source: [${websiteName}](${sourceUrl})*\n\n`;
+            }
             return `${childContent}\n`;
           default:
             return childContent;
@@ -162,6 +226,9 @@ const RichTextEditor = ({
   // Initialize undo/redo stacks when component mounts
   useEffect(() => {
     const htmlContent = markdownToHtml(initialContent);
+    console.log('Rich Editor Debug - Initial markdown:', initialContent);
+    console.log('Rich Editor Debug - Converted to HTML:', htmlContent);
+    console.log('Rich Editor Debug - Contains base64 image:', initialContent.includes('data:image'));
     setUndoStack([htmlContent]);
     setRedoStack([]);
   }, [initialContent]);
@@ -177,6 +244,9 @@ const RichTextEditor = ({
 
   const handleSave = async () => {
     const markdownContent = htmlToMarkdown(editorContent);
+    
+    console.log('Rich Editor Debug - HTML content:', editorContent);
+    console.log('Rich Editor Debug - Generated markdown:', markdownContent);
     
     if (markdownContent.trim() === initialContent.trim()) {
       onEditEnd?.();
@@ -280,7 +350,67 @@ const RichTextEditor = ({
     setEditorContent(editorRef.current.innerHTML);
   };
 
-  const insertImage = () => {
+  const insertImage = async () => {
+    // Save current cursor position before opening modal
+    saveSelection();
+    
+    if (!message || !history) {
+      // Fallback to file upload if no message context
+      insertImageFromFile();
+      return;
+    }
+
+    setImageLoading(true);
+    try {
+      // Find the user message before this assistant message to get the query
+      const messageIndex = history.findIndex(msg => msg.messageId === message.messageId);
+      const userQuery = messageIndex > 0 ? history[messageIndex - 1].content : '';
+
+      if (!userQuery) {
+        insertImageFromFile();
+        return;
+      }
+
+      // Fetch images using the same API as SearchImages component
+      const chatModelProvider = localStorage.getItem('chatModelProvider');
+      const chatModel = localStorage.getItem('chatModel');
+      const customOpenAIBaseURL = localStorage.getItem('openAIBaseURL');
+      const customOpenAIKey = localStorage.getItem('openAIApiKey');
+
+      const res = await fetch(`/api/images`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: userQuery,
+          chatHistory: history.slice(0, messageIndex - 1),
+          chatModel: {
+            provider: chatModelProvider,
+            model: chatModel,
+            ...(chatModelProvider === 'custom_openai' && {
+              customOpenAIBaseURL: customOpenAIBaseURL,
+              customOpenAIKey: customOpenAIKey,
+            }),
+          },
+        }),
+      });
+
+      const data = await res.json();
+      const images = data.images ?? [];
+      
+      setAvailableImages(images);
+      setShowImageSelector(true);
+    } catch (error) {
+      console.error('Failed to fetch images:', error);
+      // Fallback to file upload on error
+      insertImageFromFile();
+    } finally {
+      setImageLoading(false);
+    }
+  };
+
+  const insertImageFromFile = () => {
     // Create a hidden file input element
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
@@ -309,29 +439,9 @@ const RichTextEditor = ({
         const reader = new FileReader();
         reader.onload = (e) => {
           const base64 = e.target?.result as string;
-          
-          // Create image element
-          const img = document.createElement('img');
-          img.src = base64;
-          img.style.maxWidth = '100%';
-          img.style.height = 'auto';
-          img.alt = file.name;
-          img.title = file.name;
-          
-          const selection = window.getSelection();
-          if (selection && selection.rangeCount > 0) {
-            const range = selection.getRangeAt(0);
-            range.deleteContents();
-            range.insertNode(img);
-            range.setStartAfter(img);
-            range.collapse(true);
-            selection.removeAllRanges();
-            selection.addRange(range);
-          } else {
-            editorRef.current!.appendChild(img);
-          }
-          
-          setEditorContent(editorRef.current!.innerHTML);
+          insertImageElement(base64, file.name);
+          // Close the image selector modal after successful upload
+          setShowImageSelector(false);
         };
         
         reader.onerror = () => {
@@ -348,6 +458,251 @@ const RichTextEditor = ({
     // Add to DOM and trigger click
     document.body.appendChild(fileInput);
     fileInput.click();
+  };
+
+  const insertImageElement = (src: string, alt: string = 'Image', sourceUrl?: string) => {
+    if (!editorRef.current) return;
+
+    // Create a container div for the image and source link
+    const container = document.createElement('div');
+    container.style.display = 'block';
+    container.style.margin = '1em 0';
+
+    // Create image element
+    const img = document.createElement('img');
+    img.src = src;
+    img.style.maxWidth = '100%';
+    img.style.height = 'auto';
+    img.alt = alt;
+    img.title = alt;
+    img.style.display = 'block';
+    img.style.borderRadius = '8px';
+    
+    container.appendChild(img);
+
+    // Add source link if provided
+    if (sourceUrl && sourceUrl !== src) {
+      const sourceLink = document.createElement('div');
+      sourceLink.style.fontSize = '12px';
+      sourceLink.style.color = '#666';
+      sourceLink.style.marginTop = '4px';
+      
+      // Extract website name from URL
+      let websiteName = '';
+      try {
+        const url = new URL(sourceUrl);
+        websiteName = url.hostname.replace('www.', '');
+      } catch {
+        websiteName = 'View source';
+      }
+      
+      sourceLink.innerHTML = `Source: <a href="${sourceUrl}" target="_blank" rel="noopener noreferrer" style="color: #3b82f6; text-decoration: underline;">${websiteName}</a>`;
+      container.appendChild(sourceLink);
+    }
+    
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      range.deleteContents();
+      range.insertNode(container);
+      range.setStartAfter(container);
+      range.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    } else {
+      editorRef.current.appendChild(container);
+    }
+    
+    setEditorContent(editorRef.current.innerHTML);
+  };
+
+  const selectImageFromResults = (imageUrl: string, title: string, sourceUrl?: string) => {
+    saveState();
+    
+    // Restore the saved cursor position
+    restoreSelection();
+    
+    insertImageElement(imageUrl, title, sourceUrl);
+    setShowImageSelector(false);
+  };
+
+  const insertVideo = async () => {
+    // Save current cursor position before opening modal
+    saveSelection();
+    
+    if (!message || !history) {
+      // Fallback to URL input if no message context
+      insertVideoFromURL();
+      return;
+    }
+
+    setVideoLoading(true);
+    try {
+      // Find the user message before this assistant message to get the query
+      const messageIndex = history.findIndex(msg => msg.messageId === message.messageId);
+      const userQuery = messageIndex > 0 ? history[messageIndex - 1].content : '';
+
+      if (!userQuery) {
+        insertVideoFromURL();
+        return;
+      }
+
+      // Fetch videos using the same API as SearchVideos component
+      const chatModelProvider = localStorage.getItem('chatModelProvider');
+      const chatModel = localStorage.getItem('chatModel');
+      const customOpenAIBaseURL = localStorage.getItem('openAIBaseURL');
+      const customOpenAIKey = localStorage.getItem('openAIApiKey');
+
+      const res = await fetch(`/api/videos`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: userQuery,
+          chatHistory: history.slice(0, messageIndex - 1),
+          chatModel: {
+            provider: chatModelProvider,
+            model: chatModel,
+            ...(chatModelProvider === 'custom_openai' && {
+              customOpenAIBaseURL: customOpenAIBaseURL,
+              customOpenAIKey: customOpenAIKey,
+            }),
+          },
+        }),
+      });
+
+      const data = await res.json();
+      const videos = data.videos ?? [];
+      
+      setAvailableVideos(videos);
+      setShowVideoSelector(true);
+    } catch (error) {
+      console.error('Failed to fetch videos:', error);
+      // Fallback to URL input on error
+      insertVideoFromURL();
+    } finally {
+      setVideoLoading(false);
+    }
+  };
+
+  const insertVideoFromURL = () => {
+    const url = prompt('Enter YouTube video URL or video embed URL:');
+    if (url && url.trim() && editorRef.current) {
+      saveState();
+      editorRef.current.focus();
+      
+      let embedUrl = url.trim();
+      
+      // Convert YouTube URLs to embed format
+      if (embedUrl.includes('youtube.com/watch?v=')) {
+        const videoId = embedUrl.split('watch?v=')[1].split('&')[0];
+        embedUrl = `https://www.youtube.com/embed/${videoId}`;
+      } else if (embedUrl.includes('youtu.be/')) {
+        const videoId = embedUrl.split('youtu.be/')[1].split('?')[0];
+        embedUrl = `https://www.youtube.com/embed/${videoId}`;
+      }
+      
+      insertVideoElement(embedUrl, url.trim());
+      // Close the video selector modal after successful URL input
+      setShowVideoSelector(false);
+    }
+  };
+
+  const insertVideoElement = (embedUrl: string, originalUrl: string) => {
+    if (!editorRef.current) return;
+
+    // Create iframe element for video embed
+    const iframe = document.createElement('iframe');
+    iframe.src = embedUrl;
+    iframe.width = '560';
+    iframe.height = '315';
+    iframe.style.maxWidth = '100%';
+    iframe.style.height = 'auto';
+    iframe.style.aspectRatio = '16/9';
+    iframe.setAttribute('frameborder', '0');
+    iframe.setAttribute('allowfullscreen', 'true');
+    iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture');
+    iframe.title = 'Embedded Video';
+    
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      range.deleteContents();
+      range.insertNode(iframe);
+      range.setStartAfter(iframe);
+      range.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    } else {
+      editorRef.current.appendChild(iframe);
+    }
+    
+    setEditorContent(editorRef.current.innerHTML);
+  };
+
+  const selectVideoFromResults = (videoUrl: string, title: string) => {
+    saveState();
+    
+    // Restore the saved cursor position
+    restoreSelection();
+    
+    let embedUrl = videoUrl;
+    
+    // Convert YouTube URLs to embed format
+    if (embedUrl.includes('youtube.com/watch?v=')) {
+      const videoId = embedUrl.split('watch?v=')[1].split('&')[0];
+      embedUrl = `https://www.youtube.com/embed/${videoId}`;
+    } else if (embedUrl.includes('youtu.be/')) {
+      const videoId = embedUrl.split('youtu.be/')[1].split('?')[0];
+      embedUrl = `https://www.youtube.com/embed/${videoId}`;
+    }
+    
+    insertVideoElement(embedUrl, title);
+    setShowVideoSelector(false);
+  };
+
+  const insertCitation = () => {
+    // Save current cursor position before opening modal
+    saveSelection();
+    
+    if (!message || !message.sources || message.sources.length === 0) {
+      toast.error('No sources available for citations');
+      return;
+    }
+
+    setShowCitationSelector(true);
+  };
+
+  const selectCitationFromSources = (sourceIndex: number) => {
+    saveState();
+    
+    // Restore the saved cursor position
+    restoreSelection();
+    
+    // Insert citation with proper format [1], [2], etc.
+    const citationNumber = sourceIndex + 1;
+    const citationText = `[${citationNumber}]`;
+    
+    if (editorRef.current) {
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        range.deleteContents();
+        range.insertNode(document.createTextNode(citationText));
+        range.setStartAfter(range.endContainer);
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      } else {
+        // Fallback: insert at end
+        editorRef.current.appendChild(document.createTextNode(citationText));
+      }
+      
+      setEditorContent(editorRef.current.innerHTML);
+    }
+    
+    setShowCitationSelector(false);
   };
 
   const insertLink = () => {
@@ -417,6 +772,10 @@ const RichTextEditor = ({
   useEffect(() => {
     if (editorRef.current) {
       const htmlContent = markdownToHtml(initialContent);
+      
+      console.log('Rich Editor Content Init - Initial markdown:', initialContent);
+      console.log('Rich Editor Content Init - HTML content:', htmlContent);
+      console.log('Rich Editor Content Init - HTML contains img tag:', htmlContent.includes('<img'));
       
       // Clear existing content first
       editorRef.current.innerHTML = '';
@@ -585,10 +944,34 @@ const RichTextEditor = ({
         </button>
         <button
           onClick={insertImage}
-          className="p-1.5 text-black/70 dark:text-white/70 hover:text-black dark:hover:text-white hover:bg-light-secondary dark:hover:bg-dark-secondary rounded transition-colors"
-          title="Insert Image"
+          disabled={imageLoading}
+          className="p-1.5 text-black/70 dark:text-white/70 hover:text-black dark:hover:text-white hover:bg-light-secondary dark:hover:bg-dark-secondary rounded transition-colors disabled:opacity-50"
+          title="Insert Image from Search Results"
         >
-          <Image size={14} />
+          {imageLoading ? (
+            <div className="animate-spin w-3 h-3 border border-gray-400 border-t-transparent rounded-full" />
+          ) : (
+            <Image size={14} />
+          )}
+        </button>
+        <button
+          onClick={insertVideo}
+          disabled={videoLoading}
+          className="p-1.5 text-black/70 dark:text-white/70 hover:text-black dark:hover:text-white hover:bg-light-secondary dark:hover:bg-dark-secondary rounded transition-colors disabled:opacity-50"
+          title="Insert Video from Search Results"
+        >
+          {videoLoading ? (
+            <div className="animate-spin w-3 h-3 border border-gray-400 border-t-transparent rounded-full" />
+          ) : (
+            <Video size={14} />
+          )}
+        </button>
+        <button
+          onClick={insertCitation}
+          className="p-1.5 text-black/70 dark:text-white/70 hover:text-black dark:hover:text-white hover:bg-light-secondary dark:hover:bg-dark-secondary rounded transition-colors"
+          title="Insert Citation"
+        >
+          <BookCopy size={14} />
         </button>
         <button
           onClick={() => formatText('formatBlock', 'blockquote')}
@@ -716,6 +1099,14 @@ const RichTextEditor = ({
             height: auto !important;
             display: inline-block !important;
           }
+          .wysiwyg-editor iframe {
+            max-width: 100% !important;
+            aspect-ratio: 16/9 !important;
+            border: none !important;
+            border-radius: 8px !important;
+            display: block !important;
+            margin: 0.5em 0 !important;
+          }
           /* Alignment styles */
           .wysiwyg-editor [style*="text-align: left"] {
             text-align: left !important;
@@ -746,6 +1137,218 @@ const RichTextEditor = ({
           {loading ? 'Saving...' : 'Save Changes'}
         </button>
       </div>
+
+      {/* Image Selector Modal */}
+      {showImageSelector && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-black dark:text-white">Select Image</h3>
+              <button
+                onClick={() => setShowImageSelector(false)}
+                className="p-2 text-black/70 dark:text-white/70 hover:text-black dark:hover:text-white hover:bg-light-secondary dark:hover:bg-dark-secondary rounded transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            {imageLoading ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {[...Array(8)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="bg-light-secondary dark:bg-dark-secondary h-32 w-full rounded-lg animate-pulse aspect-video object-cover"
+                  />
+                ))}
+              </div>
+            ) : availableImages.length > 0 ? (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-4">
+                  {availableImages.map((image, i) => (
+                    <div
+                      key={i}
+                      onClick={() => selectImageFromResults(image.img_src, image.title, image.url)}
+                      className="cursor-pointer transition duration-200 hover:scale-105 active:scale-95"
+                    >
+                      <img
+                        src={image.img_src}
+                        alt={image.title}
+                        className="w-full h-32 object-cover rounded-lg border border-light-200 dark:border-dark-200 hover:border-blue-500"
+                      />
+                      <p className="text-xs text-black/70 dark:text-white/70 mt-1 truncate" title={image.title}>
+                        {image.title}
+                      </p>
+                      {image.url && (
+                        <p className="text-xs text-blue-600 dark:text-blue-400 mt-1 truncate" title={image.url}>
+                          {new URL(image.url).hostname}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <div className="pt-4 border-t border-light-200 dark:border-dark-200">
+                  <button
+                    onClick={insertImageFromFile}
+                    className="w-full px-4 py-2 text-sm font-medium text-black/70 dark:text-white/70 hover:text-black dark:hover:text-white hover:bg-light-secondary dark:hover:bg-dark-secondary rounded-lg transition-colors border border-light-200 dark:border-dark-200"
+                  >
+                    Or upload from device
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-black/70 dark:text-white/70 mb-4">No images found for this search</p>
+                <button
+                  onClick={insertImageFromFile}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+                >
+                  Upload from device
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Video Selector Modal */}
+      {showVideoSelector && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-black dark:text-white">Select Video</h3>
+              <button
+                onClick={() => setShowVideoSelector(false)}
+                className="p-2 text-black/70 dark:text-white/70 hover:text-black dark:hover:text-white hover:bg-light-secondary dark:hover:bg-dark-secondary rounded transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            {videoLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[...Array(6)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="bg-light-secondary dark:bg-dark-secondary h-48 w-full rounded-lg animate-pulse aspect-video"
+                  />
+                ))}
+              </div>
+            ) : availableVideos.length > 0 ? (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                  {availableVideos.map((video, i) => (
+                    <div
+                      key={i}
+                      onClick={() => selectVideoFromResults(video.url, video.title)}
+                      className="cursor-pointer transition duration-200 hover:scale-105 active:scale-95"
+                    >
+                      <div className="relative">
+                        <img
+                          src={video.img_src || `https://img.youtube.com/vi/${video.url.split('v=')[1]?.split('&')[0]}/maxresdefault.jpg`}
+                          alt={video.title}
+                          className="w-full h-48 object-cover rounded-lg border border-light-200 dark:border-dark-200 hover:border-blue-500"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="bg-black/70 rounded-full p-3">
+                            <Video size={20} className="text-white" />
+                          </div>
+                        </div>
+                      </div>
+                      <p className="text-sm text-black dark:text-white mt-2 font-medium line-clamp-2" title={video.title}>
+                        {video.title}
+                      </p>
+                      <p className="text-xs text-black/70 dark:text-white/70 mt-1">
+                        {video.views} • {video.upload_date}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+                <div className="pt-4 border-t border-light-200 dark:border-dark-200">
+                  <button
+                    onClick={insertVideoFromURL}
+                    className="w-full px-4 py-2 text-sm font-medium text-black/70 dark:text-white/70 hover:text-black dark:hover:text-white hover:bg-light-secondary dark:hover:bg-dark-secondary rounded-lg transition-colors border border-light-200 dark:border-dark-200"
+                  >
+                    Or enter video URL
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-black/70 dark:text-white/70 mb-4">No videos found for this search</p>
+                <button
+                  onClick={insertVideoFromURL}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+                >
+                  Enter video URL
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Citation Selector Modal */}
+      {showCitationSelector && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-black dark:text-white">Select Citation</h3>
+              <button
+                onClick={() => setShowCitationSelector(false)}
+                className="p-2 text-black/70 dark:text-white/70 hover:text-black dark:hover:text-white hover:bg-light-secondary dark:hover:bg-dark-secondary rounded transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            {message?.sources && message.sources.length > 0 ? (
+              <div className="space-y-3">
+                {message.sources.map((source: any, i: number) => (
+                  <div
+                    key={i}
+                    onClick={() => selectCitationFromSources(i)}
+                    className="cursor-pointer p-4 border border-light-200 dark:border-dark-200 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 transition duration-200 hover:bg-light-secondary/50 dark:hover:bg-dark-secondary/50"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="inline-flex items-center justify-center w-6 h-6 bg-blue-600 text-white text-xs font-medium rounded-full">
+                            {i + 1}
+                          </span>
+                          <h4 className="text-sm font-medium text-black dark:text-white line-clamp-1">
+                            {source.metadata?.title || 'Untitled Source'}
+                          </h4>
+                        </div>
+                        <p className="text-xs text-black/70 dark:text-white/70 line-clamp-2 mb-2">
+                          {source.pageContent.slice(0, 150)}...
+                        </p>
+                        {source.metadata?.url && (
+                          <a
+                            href={source.metadata.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {new URL(source.metadata.url).hostname}
+                          </a>
+                        )}
+                      </div>
+                      <div className="text-xs text-black/50 dark:text-white/50">
+                        Click to insert [{i + 1}]
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-black/70 dark:text-white/70 mb-4">No sources available for citations</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

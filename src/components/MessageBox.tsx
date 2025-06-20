@@ -156,6 +156,7 @@ const MessageBox = ({
                   <h3 className="text-black dark:text-white font-medium text-xl">
                     Sources
                   </h3>
+                  <span className="text-xs text-gray-500">({message.sources.length} sources)</span>
                 </div>
                 <MessageSources sources={message.sources} />
               </div>
@@ -181,6 +182,8 @@ const MessageBox = ({
                   onUpdate={onMessageUpdate}
                   onEditStart={onEditStart}
                   onEditEnd={onEditEnd}
+                  message={message}
+                  history={history}
                 />
               ) : (
                 <Markdown
