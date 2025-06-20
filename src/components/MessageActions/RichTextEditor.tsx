@@ -1155,7 +1155,9 @@ const RichTextEditor = ({
   return (
     <div className="w-full">
       {/* Toolbar */}
-      <div className="flex items-center gap-1 p-3 mb-2 bg-light-secondary/50 dark:bg-dark-secondary/50 rounded-lg border border-light-200 dark:border-dark-200 flex-wrap">
+      <div className="sticky top-0 z-40 flex items-center justify-between gap-3 p-3 mb-2 bg-light-secondary/90 dark:bg-dark-secondary/90 backdrop-blur-sm rounded-lg border border-light-200 dark:border-dark-200 shadow-sm">
+        {/* Left side - Formatting tools */}
+        <div className="flex items-center gap-1 flex-wrap">
         {/* Undo/Redo */}
         <button
           onClick={handleUndo}
@@ -1331,7 +1333,25 @@ const RichTextEditor = ({
         >
           <Code size={14} />
         </button>
+        </div>
 
+        {/* Right side - Action buttons */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleCancel}
+            disabled={loading}
+            className="px-3 py-1.5 text-sm font-medium text-black/70 dark:text-white/70 hover:text-black dark:hover:text-white hover:bg-light-secondary dark:hover:bg-dark-secondary rounded-lg transition-colors disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={loading || !editorContent.trim()}
+            className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg text-sm font-medium transition-colors disabled:cursor-not-allowed"
+          >
+            {loading ? 'Saving...' : 'Save'}
+          </button>
+        </div>
       </div>
 
       {/* WYSIWYG Editor */}
@@ -1352,7 +1372,7 @@ const RichTextEditor = ({
             }
           }
         }}
-        className="w-full min-h-[200px] p-4 bg-white dark:bg-gray-900 border border-light-200 dark:border-dark-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black dark:text-white overflow-y-auto mb-3 wysiwyg-editor"
+        className="w-full min-h-[400px] p-4 pt-6 bg-white dark:bg-gray-900 border border-light-200 dark:border-dark-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black dark:text-white overflow-y-auto mb-3 wysiwyg-editor"
         style={{
           lineHeight: '1.6',
           fontSize: '14px',
@@ -1535,23 +1555,7 @@ const RichTextEditor = ({
         `
       }} />
 
-      {/* Action Buttons */}
-      <div className="flex items-center justify-end gap-3">
-        <button
-          onClick={handleCancel}
-          disabled={loading}
-          className="px-4 py-2 text-sm font-medium text-black/70 dark:text-white/70 hover:text-black dark:hover:text-white hover:bg-light-secondary dark:hover:bg-dark-secondary rounded-lg transition-colors disabled:opacity-50"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={handleSave}
-          disabled={loading || !editorContent.trim()}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg text-sm font-medium transition-colors disabled:cursor-not-allowed"
-        >
-          {loading ? 'Saving...' : 'Save Changes'}
-        </button>
-      </div>
+
 
       {/* Image Selector Modal */}
       {showImageSelector && (
