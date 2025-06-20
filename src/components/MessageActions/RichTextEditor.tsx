@@ -3,10 +3,12 @@
 import { 
   Edit3, Save, X, Bold, Italic, List, ListOrdered, Link, Quote, Code, 
   Undo, Redo, Underline, Strikethrough, AlignLeft, AlignCenter, AlignRight,
-  Image, Video, BookCopy
+  Image, Video, BookCopy, Sparkles, CheckCircle, RefreshCw,
+  ArrowDown, ArrowUp
 } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
+import crypto from 'crypto';
 
 const RichTextEditor = ({
   messageId,
@@ -37,6 +39,13 @@ const RichTextEditor = ({
   const [videoLoading, setVideoLoading] = useState(false);
   const [savedSelection, setSavedSelection] = useState<Range | null>(null);
   const [showCitationSelector, setShowCitationSelector] = useState(false);
+  const [showAIAssistant, setShowAIAssistant] = useState(false);
+  const [aiAssistantLoading, setAIAssistantLoading] = useState(false);
+  const [selectedText, setSelectedText] = useState('');
+  const [aiSuggestions, setAISuggestions] = useState<string[]>([]);
+  const [showContextualAI, setShowContextualAI] = useState(false);
+  const [contextualAIPosition, setContextualAIPosition] = useState({ x: 0, y: 0, above: false });
+  const [selectionRange, setSelectionRange] = useState<Range | null>(null);
   const editorRef = useRef<HTMLDivElement>(null);
 
   // Save current cursor position
@@ -54,6 +63,45 @@ const RichTextEditor = ({
       selection?.removeAllRanges();
       selection?.addRange(savedSelection);
       editorRef.current.focus();
+    }
+  };
+
+  // Handle text selection to show contextual AI toolbar
+  const handleTextSelection = () => {
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const selectedText = selection.toString().trim();
+      
+      if (selectedText.length > 0) {
+        const range = selection.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        
+        // Calculate available space below and above the selection
+        const toolbarHeight = 250; // Approximate height of the AI toolbar
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        
+        // Position the contextual AI toolbar - above if not enough space below
+        const shouldPositionAbove = spaceBelow < toolbarHeight && spaceAbove > toolbarHeight;
+        
+        setContextualAIPosition({
+          x: rect.left + rect.width / 2,
+          y: shouldPositionAbove ? rect.top - 10 : rect.bottom + 10,
+          above: shouldPositionAbove
+        });
+        
+        setSelectedText(selectedText);
+        setSelectionRange(range.cloneRange());
+        setShowContextualAI(true);
+      } else {
+        setShowContextualAI(false);
+        setSelectedText('');
+        setSelectionRange(null);
+      }
+    } else {
+      setShowContextualAI(false);
+      setSelectedText('');
+      setSelectionRange(null);
     }
   };
 
@@ -241,6 +289,22 @@ const RichTextEditor = ({
       }
     };
   }, []);
+
+  // Hide contextual AI toolbar when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showContextualAI && event.target instanceof Element && !event.target.closest('.contextual-ai-toolbar')) {
+        setShowContextualAI(false);
+      }
+    };
+
+    if (showContextualAI) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [showContextualAI]);
 
   const handleSave = async () => {
     const markdownContent = htmlToMarkdown(editorContent);
@@ -705,6 +769,286 @@ const RichTextEditor = ({
     setShowCitationSelector(false);
   };
 
+  // AI Writing Assistant Functions
+  const openAIAssistant = () => {
+    // Save current cursor position
+    saveSelection();
+    
+    // Get selected text
+    const selection = window.getSelection();
+    const selected = selection?.toString() || '';
+    setSelectedText(selected);
+    
+    // If no text is selected, get the current paragraph/line
+    if (!selected && editorRef.current && selection?.rangeCount) {
+      const range = selection.getRangeAt(0);
+      let element = range.commonAncestorContainer;
+      
+      // Find the closest block element
+      while (element && element.nodeType !== Node.ELEMENT_NODE && element.parentNode) {
+        element = element.parentNode;
+      }
+      
+      if (element && element.nodeType === Node.ELEMENT_NODE) {
+        const blockElement = element as HTMLElement;
+        setSelectedText(blockElement.textContent || '');
+      }
+    }
+    
+    setShowAIAssistant(true);
+  };
+
+  // Process AI request and apply directly to editor
+  const processContextualAI = async (action: string) => {
+    if (!selectedText || !selectionRange) {
+      toast.error('Please select some text first');
+      return;
+    }
+
+    // Hide the contextual toolbar and show loading state
+    setShowContextualAI(false);
+    
+    // Show a loading indicator where the text was selected
+    const loadingSpan = document.createElement('span');
+    loadingSpan.style.background = 'linear-gradient(90deg, #e5e7eb, #f3f4f6, #e5e7eb)';
+    loadingSpan.style.backgroundSize = '200% 100%';
+    loadingSpan.style.animation = 'shimmer 1.5s infinite';
+    loadingSpan.style.borderRadius = '4px';
+    loadingSpan.style.padding = '2px 4px';
+    loadingSpan.textContent = selectedText;
+    
+    // Add shimmer animation to head if not already present
+    if (!document.querySelector('#shimmer-style')) {
+      const style = document.createElement('style');
+      style.id = 'shimmer-style';
+      style.textContent = `
+        @keyframes shimmer {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    // Replace selected text with loading indicator
+    selectionRange.deleteContents();
+    selectionRange.insertNode(loadingSpan);
+
+    try {
+      // Get the current chat model configuration
+      const chatModelProvider = localStorage.getItem('chatModelProvider');
+      const chatModel = localStorage.getItem('chatModel');
+      const customOpenAIBaseURL = localStorage.getItem('openAIBaseURL');
+      const customOpenAIKey = localStorage.getItem('openAIApiKey');
+
+      // Debug: Log what we're getting from localStorage
+      console.log('AI Writing Assistant - localStorage config:', {
+        chatModelProvider,
+        chatModel,
+        customOpenAIBaseURL,
+        customOpenAIKey: customOpenAIKey ? '[REDACTED]' : 'null'
+      });
+
+      // Validate required configuration
+      if (!chatModelProvider || !chatModel) {
+        toast.error('Please select a chat model in settings first');
+        return;
+      }
+
+      let prompt = '';
+      const textToProcess = selectedText;
+
+      switch (action) {
+        case 'improve':
+          prompt = `Improve the following text by making it clearer, more engaging, and better structured. Keep the same meaning and tone but enhance readability:\n\n${textToProcess}`;
+          break;
+        case 'grammar':
+          prompt = `Fix grammar, spelling, and punctuation errors in the following text. Return only the corrected version:\n\n${textToProcess}`;
+          break;
+        case 'formal':
+          prompt = `Rewrite the following text in a more formal, professional tone:\n\n${textToProcess}`;
+          break;
+        case 'casual':
+          prompt = `Rewrite the following text in a more casual, friendly tone:\n\n${textToProcess}`;
+          break;
+        case 'shorter':
+          prompt = `Make the following text more concise while keeping all important information:\n\n${textToProcess}`;
+          break;
+        case 'longer':
+          prompt = `Expand the following text with more details, examples, and explanations:\n\n${textToProcess}`;
+          break;
+        case 'translate':
+          prompt = `Translate the following text to English (if it's not English) or to the most appropriate language based on context:\n\n${textToProcess}`;
+          break;
+        default:
+          prompt = `Help improve the following text:\n\n${textToProcess}`;
+      }
+
+      const requestPayload = {
+        text: textToProcess,
+        action: action,
+        chatModel: {
+          name: chatModel,
+          provider: chatModelProvider,
+          ...(chatModelProvider === 'custom_openai' && {
+            customOpenAIBaseURL: customOpenAIBaseURL,
+            customOpenAIKey: customOpenAIKey,
+          }),
+        },
+        embeddingModel: {
+          name: localStorage.getItem('embeddingModel'),
+          provider: localStorage.getItem('embeddingModelProvider'),
+        },
+      };
+
+      // Debug: Log request payload (without sensitive data)
+      console.log('AI Writing Assistant - Request payload:', {
+        ...requestPayload,
+        chatModel: {
+          ...requestPayload.chatModel,
+          ...(requestPayload.chatModel.customOpenAIKey && {
+            customOpenAIKey: '[REDACTED]'
+          })
+        }
+      });
+
+      const res = await fetch('/api/writing-assistant', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestPayload),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to get AI suggestions');
+      }
+
+      const data = await res.json();
+      
+      if (data.suggestions && data.suggestions.length > 0) {
+        // Replace the loading indicator with the AI suggestion
+        const suggestion = data.suggestions[0];
+        loadingSpan.textContent = suggestion;
+        loadingSpan.style.background = 'transparent';
+        loadingSpan.style.animation = 'none';
+        loadingSpan.style.padding = '0';
+        
+        // Update editor content and save state
+        if (editorRef.current) {
+          setEditorContent(editorRef.current.innerHTML);
+          saveState();
+        }
+        
+        toast.success('Text improved successfully!');
+      } else {
+        // Restore original text if no suggestion
+        loadingSpan.textContent = selectedText;
+        loadingSpan.style.background = 'transparent';
+        loadingSpan.style.animation = 'none';
+        loadingSpan.style.padding = '0';
+        toast.error('No suggestions received from AI');
+      }
+    } catch (error) {
+      // Restore original text on error
+      loadingSpan.textContent = selectedText;
+      loadingSpan.style.background = 'transparent';
+      loadingSpan.style.animation = 'none';
+      loadingSpan.style.padding = '0';
+      console.error('AI Assistant error:', error);
+      toast.error('Failed to get AI suggestions');
+    }
+  };
+
+  // Keep the original processAIRequest for the modal (backup)
+  const processAIRequest = async (action: string, customPrompt?: string) => {
+    if (!selectedText && !customPrompt) {
+      toast.error('Please select some text first');
+      return;
+    }
+
+    setAIAssistantLoading(true);
+    setAISuggestions([]);
+
+    try {
+      const requestPayload = {
+        text: selectedText || '',
+        action: action,
+        customPrompt: customPrompt,
+        chatModel: {
+          name: localStorage.getItem('chatModel'),
+          provider: localStorage.getItem('chatModelProvider'),
+        },
+        embeddingModel: {
+          name: localStorage.getItem('embeddingModel'),
+          provider: localStorage.getItem('embeddingModelProvider'),
+        },
+      };
+
+      const res = await fetch('/api/writing-assistant', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestPayload),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to get AI suggestions');
+      }
+
+      const data = await res.json();
+      
+      if (data.suggestions && data.suggestions.length > 0) {
+        setAISuggestions(data.suggestions);
+      } else {
+        toast.error('No suggestions received from AI');
+      }
+    } catch (error) {
+      console.error('AI Assistant error:', error);
+      toast.error('Failed to get AI suggestions');
+    } finally {
+      setAIAssistantLoading(false);
+    }
+  };
+
+  const applyAISuggestion = (suggestion: string) => {
+    // Restore the saved cursor position
+    restoreSelection();
+    
+    if (selectedText && editorRef.current) {
+      // Replace selected text with suggestion
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        range.deleteContents();
+        range.insertNode(document.createTextNode(suggestion));
+        range.setStartAfter(range.endContainer);
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+    } else {
+      // If no text was selected, append to the end
+      if (editorRef.current) {
+        const p = document.createElement('p');
+        p.textContent = suggestion;
+        editorRef.current.appendChild(p);
+      }
+    }
+    
+    if (editorRef.current) {
+      setEditorContent(editorRef.current.innerHTML);
+      saveState();
+    }
+    
+    setShowAIAssistant(false);
+    setAISuggestions([]);
+    toast.success('AI suggestion applied');
+  };
+
   const insertLink = () => {
     const url = prompt('Enter link URL:');
     if (url && url.trim()) {
@@ -987,6 +1331,7 @@ const RichTextEditor = ({
         >
           <Code size={14} />
         </button>
+
       </div>
 
       {/* WYSIWYG Editor */}
@@ -994,6 +1339,8 @@ const RichTextEditor = ({
         ref={editorRef}
         contentEditable
         onInput={handleContentChange}
+        onMouseUp={handleTextSelection}
+        onKeyUp={handleTextSelection}
         onKeyDown={(e) => {
           if (e.ctrlKey || e.metaKey) {
             if (e.key === 'z' && !e.shiftKey) {
@@ -1014,6 +1361,74 @@ const RichTextEditor = ({
         }}
         suppressContentEditableWarning={true}
       />
+
+      {/* Contextual AI Toolbar */}
+      {showContextualAI && (
+        <div
+          className="contextual-ai-toolbar fixed z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg p-2"
+          style={{
+            left: contextualAIPosition.x - 150, // Center the toolbar
+            top: contextualAIPosition.above ? contextualAIPosition.y - 250 : contextualAIPosition.y,
+            transform: 'translateX(-50%)',
+          }}
+        >
+          <div className="text-xs text-gray-600 dark:text-gray-400 mb-2 px-2">
+            AI Actions for selected text
+          </div>
+          <div className="flex flex-col gap-1">
+            <button
+              onClick={() => processContextualAI('improve')}
+              className="flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+            >
+              <Sparkles size={14} />
+              Improve
+            </button>
+            <button
+              onClick={() => processContextualAI('grammar')}
+              className="flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+            >
+              <CheckCircle size={14} />
+              Fix Grammar
+            </button>
+            <button
+              onClick={() => processContextualAI('formal')}
+              className="flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+            >
+              <Edit3 size={14} />
+              Make Formal
+            </button>
+            <button
+              onClick={() => processContextualAI('casual')}
+              className="flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+            >
+              <RefreshCw size={14} />
+              Make Casual
+            </button>
+            <button
+              onClick={() => processContextualAI('shorter')}
+              className="flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+            >
+              <ArrowDown size={14} />
+              Make Shorter
+            </button>
+            <button
+              onClick={() => processContextualAI('longer')}
+              className="flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+            >
+              <ArrowUp size={14} />
+              Make Longer
+            </button>
+            <div className="border-t border-gray-200 dark:border-gray-600 my-1"></div>
+            <button
+              onClick={() => setShowContextualAI(false)}
+              className="flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors text-gray-500"
+            >
+              <X size={14} />
+              Close
+            </button>
+          </div>
+        </div>
+      )}
       
       {/* Add global styles for WYSIWYG editor */}
       <style dangerouslySetInnerHTML={{
@@ -1344,6 +1759,156 @@ const RichTextEditor = ({
             ) : (
               <div className="text-center py-8">
                 <p className="text-black/70 dark:text-white/70 mb-4">No sources available for citations</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* AI Writing Assistant Modal */}
+      {showAIAssistant && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-black dark:text-white flex items-center gap-2">
+                <Sparkles size={20} className="text-purple-600" />
+                AI Writing Assistant
+              </h3>
+              <button
+                onClick={() => setShowAIAssistant(false)}
+                className="p-2 text-black/70 dark:text-white/70 hover:text-black dark:hover:text-white hover:bg-light-secondary dark:hover:bg-dark-secondary rounded transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            {selectedText && (
+              <div className="mb-4 p-3 bg-light-secondary/50 dark:bg-dark-secondary/50 rounded-lg border">
+                <p className="text-xs text-black/60 dark:text-white/60 mb-1">Selected text:</p>
+                <p className="text-sm text-black dark:text-white line-clamp-3">
+                  {selectedText.slice(0, 200)}{selectedText.length > 200 ? '...' : ''}
+                </p>
+              </div>
+            )}
+            
+            <div className="space-y-3 mb-4">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => processAIRequest('improve')}
+                  disabled={aiAssistantLoading}
+                  className="p-3 text-left border border-light-200 dark:border-dark-200 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 transition duration-200 hover:bg-light-secondary/50 dark:hover:bg-dark-secondary/50 disabled:opacity-50"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <Sparkles size={16} className="text-blue-600" />
+                    <span className="font-medium text-black dark:text-white">Improve</span>
+                  </div>
+                  <p className="text-xs text-black/70 dark:text-white/70">Make text clearer and more engaging</p>
+                </button>
+                
+                <button
+                  onClick={() => processAIRequest('grammar')}
+                  disabled={aiAssistantLoading}
+                  className="p-3 text-left border border-light-200 dark:border-dark-200 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 transition duration-200 hover:bg-light-secondary/50 dark:hover:bg-dark-secondary/50 disabled:opacity-50"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <CheckCircle size={16} className="text-green-600" />
+                    <span className="font-medium text-black dark:text-white">Fix Grammar</span>
+                  </div>
+                  <p className="text-xs text-black/70 dark:text-white/70">Correct grammar and spelling</p>
+                </button>
+                
+                <button
+                  onClick={() => processAIRequest('formal')}
+                  disabled={aiAssistantLoading}
+                  className="p-3 text-left border border-light-200 dark:border-dark-200 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 transition duration-200 hover:bg-light-secondary/50 dark:hover:bg-dark-secondary/50 disabled:opacity-50"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <Edit3 size={16} className="text-purple-600" />
+                    <span className="font-medium text-black dark:text-white">Formal Tone</span>
+                  </div>
+                  <p className="text-xs text-black/70 dark:text-white/70">Make more professional</p>
+                </button>
+                
+                <button
+                  onClick={() => processAIRequest('casual')}
+                  disabled={aiAssistantLoading}
+                  className="p-3 text-left border border-light-200 dark:border-dark-200 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 transition duration-200 hover:bg-light-secondary/50 dark:hover:bg-dark-secondary/50 disabled:opacity-50"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <RefreshCw size={16} className="text-orange-600" />
+                    <span className="font-medium text-black dark:text-white">Casual Tone</span>
+                  </div>
+                  <p className="text-xs text-black/70 dark:text-white/70">Make more friendly</p>
+                </button>
+                
+                <button
+                  onClick={() => processAIRequest('shorter')}
+                  disabled={aiAssistantLoading}
+                  className="p-3 text-left border border-light-200 dark:border-dark-200 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 transition duration-200 hover:bg-light-secondary/50 dark:hover:bg-dark-secondary/50 disabled:opacity-50"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <Underline size={16} className="text-red-600" />
+                    <span className="font-medium text-black dark:text-white">Make Shorter</span>
+                  </div>
+                  <p className="text-xs text-black/70 dark:text-white/70">Condense to key points</p>
+                </button>
+                
+                <button
+                  onClick={() => processAIRequest('longer')}
+                  disabled={aiAssistantLoading}
+                  className="p-3 text-left border border-light-200 dark:border-dark-200 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 transition duration-200 hover:bg-light-secondary/50 dark:hover:bg-dark-secondary/50 disabled:opacity-50"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <List size={16} className="text-indigo-600" />
+                    <span className="font-medium text-black dark:text-white">Expand</span>
+                  </div>
+                  <p className="text-xs text-black/70 dark:text-white/70">Add more details</p>
+                </button>
+              </div>
+              
+              <div className="border-t border-light-200 dark:border-dark-200 pt-3">
+                <button
+                  onClick={() => {
+                    const customPrompt = prompt('Enter your custom instruction:');
+                    if (customPrompt) {
+                      processAIRequest('custom', customPrompt);
+                    }
+                  }}
+                  disabled={aiAssistantLoading}
+                  className="w-full p-3 text-left border border-light-200 dark:border-dark-200 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 transition duration-200 hover:bg-light-secondary/50 dark:hover:bg-dark-secondary/50 disabled:opacity-50"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <Edit3 size={16} className="text-gray-600" />
+                    <span className="font-medium text-black dark:text-white">Custom Request</span>
+                  </div>
+                  <p className="text-xs text-black/70 dark:text-white/70">Enter your own instruction</p>
+                </button>
+              </div>
+            </div>
+            
+            {aiAssistantLoading && (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full mr-3"></div>
+                <span className="text-black dark:text-white">AI is processing your request...</span>
+              </div>
+            )}
+            
+            {aiSuggestions.length > 0 && (
+              <div className="space-y-3">
+                <h4 className="font-medium text-black dark:text-white">AI Suggestions:</h4>
+                {aiSuggestions.map((suggestion, i) => (
+                  <div key={i} className="border border-light-200 dark:border-dark-200 rounded-lg p-4">
+                    <div className="text-sm text-black dark:text-white mb-3 whitespace-pre-wrap">
+                      {suggestion}
+                    </div>
+                    <button
+                      onClick={() => applyAISuggestion(suggestion)}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+                    >
+                      Apply This Suggestion
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
           </div>
