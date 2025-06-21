@@ -52,75 +52,297 @@ const exportAsMarkdown = (messages: Message[], title: string) => {
   downloadFile(`${title || 'chat'}.md`, md, 'text/markdown');
 };
 
-const exportAsPDF = (messages: Message[], title: string) => {
-  const doc = new jsPDF();
-  const date = new Date(messages[0]?.createdAt || Date.now()).toLocaleString();
-  let y = 15;
-  const pageHeight = doc.internal.pageSize.height;
-  doc.setFontSize(18);
-  doc.text(`Chat Export: ${title}`, 10, y);
-  y += 8;
-  doc.setFontSize(11);
-  doc.setTextColor(100);
-  doc.text(`Exported on: ${date}`, 10, y);
-  y += 8;
-  doc.setDrawColor(200);
-  doc.line(10, y, 200, y);
-  y += 6;
-  doc.setTextColor(30);
-  messages.forEach((msg, idx) => {
-    if (y > pageHeight - 30) {
-      doc.addPage();
-      y = 15;
+const exportAsPDF = async (messages: Message[], title: string) => {
+  try {
+    // Show loading state
+    const button = document.querySelector('[data-pdf-export]') as HTMLElement;
+    const originalText = button?.textContent;
+    if (button) {
+      button.textContent = 'Generating PDF...';
+      button.style.pointerEvents = 'none';
     }
-    doc.setFont('helvetica', 'bold');
-    doc.text(`${msg.role === 'user' ? 'User' : 'Assistant'}`, 10, y);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.setTextColor(120);
-    doc.text(`${new Date(msg.createdAt).toLocaleString()}`, 40, y);
-    y += 6;
-    doc.setTextColor(30);
-    doc.setFontSize(12);
-    const lines = doc.splitTextToSize(msg.content, 180);
-    for (let i = 0; i < lines.length; i++) {
-      if (y > pageHeight - 20) {
+
+    // Use setTimeout to allow UI to update
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    const doc = new jsPDF();
+    const margin = 20;
+    const contentWidth = doc.internal.pageSize.width - (margin * 2);
+    let y = margin;
+
+    const checkNewPage = (space: number) => {
+      if (y + space > doc.internal.pageSize.height - 20) {
         doc.addPage();
-        y = 15;
+        y = margin;
       }
-      doc.text(lines[i], 12, y);
-      y += 6;
-    }
-    if (msg.sources && msg.sources.length > 0) {
-      doc.setFontSize(11);
-      doc.setTextColor(80);
-      if (y > pageHeight - 20) {
-        doc.addPage();
-        y = 15;
-      }
-      doc.text('Citations:', 12, y);
+    };
+
+    // Helper function to draw a nice divider
+    const addDivider = () => {
+      checkNewPage(15);
       y += 5;
-      msg.sources.forEach((src: any, i: number) => {
-        const url = src.metadata?.url || '';
-        if (y > pageHeight - 15) {
-          doc.addPage();
-          y = 15;
+      
+      // Draw a subtle line with dots
+      doc.setDrawColor(200, 200, 200); // Light gray
+      doc.setLineWidth(0.5);
+      
+      // Main line
+      doc.line(margin, y, doc.internal.pageSize.width - margin, y);
+      
+      // Add small decorative dots
+      doc.setFillColor(150, 150, 150);
+      const centerX = doc.internal.pageSize.width / 2;
+      doc.circle(centerX - 10, y, 1, 'F');
+      doc.circle(centerX, y, 1, 'F');
+      doc.circle(centerX + 10, y, 1, 'F');
+      
+      y += 10;
+    };
+
+    // Helper function to add image from URL
+    const addImageFromUrl = async (imageUrl: string, altText: string = '') => {
+      try {
+        const response = await fetch(imageUrl);
+        if (!response.ok) return;
+        
+        const blob = await response.blob();
+        const reader = new FileReader();
+        
+        return new Promise<void>((resolve) => {
+          reader.onload = () => {
+            try {
+              const base64 = reader.result as string;
+              const img = new Image();
+              img.onload = () => {
+                const maxWidth = contentWidth * 0.7;
+                const aspectRatio = img.width / img.height;
+                const imgWidth = Math.min(maxWidth, img.width);
+                const imgHeight = imgWidth / aspectRatio;
+                
+                checkNewPage(imgHeight + 15);
+                doc.addImage(base64, 'JPEG', margin, y, imgWidth, imgHeight);
+                y += imgHeight + 5;
+                
+                // Add image caption if available
+                if (altText) {
+                  doc.setFont('times', 'italic');
+                  doc.setFontSize(9);
+                  doc.setTextColor(100, 100, 100);
+                  doc.text(altText, margin, y);
+                  y += 8;
+                  doc.setTextColor(0, 0, 0);
+                }
+                
+                resolve();
+              };
+              img.onerror = () => resolve();
+              img.src = base64;
+            } catch (error) {
+              resolve();
+            }
+          };
+          reader.onerror = () => resolve();
+          reader.readAsDataURL(blob);
+        });
+      } catch (error) {
+        return Promise.resolve();
+      }
+    };
+
+    // Brand name
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(0, 0, 0);
+    doc.text('Perplexica', margin, y);
+    y += 20;
+
+    // Main title (first user question)
+    const userQuery = messages.find(msg => msg.role === 'user')?.content || title;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    const titleLines = doc.splitTextToSize(userQuery, contentWidth);
+    titleLines.forEach((line: string) => {
+      checkNewPage(10);
+      doc.text(line, margin, y);
+      y += 8;
+    });
+    y += 8; // Reduced from 15 to 8
+
+    // Process messages with proper formatting
+    for (let index = 0; index < messages.length; index++) {
+      const message = messages[index];
+      
+      if (message.role === 'user' && index > 0) {
+        // Follow-up questions without "Q:" prefix
+        checkNewPage(15);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(14);
+        const questionLines = doc.splitTextToSize(message.content, contentWidth);
+        questionLines.forEach((line: string) => {
+          checkNewPage(8);
+          doc.text(line, margin, y);
+          y += 8;
+        });
+        y += 12;
+      }
+      
+      if (message.role === 'assistant') {
+        // Process content with inline images
+        let content = message.content
+          .replace(/<think>[\s\S]*?<\/think>/g, '') // Remove think tags
+          .trim();
+        
+        // Split content by lines and process each line
+        const lines = content.split('\n');
+        
+        for (const line of lines) {
+          const trimmedLine = line.trim();
+          if (!trimmedLine) continue;
+          
+          // Check if line contains an image
+          const imageMatch = trimmedLine.match(/!\[([^\]]*)\]\(([^)]+)\)/);
+          if (imageMatch) {
+            const [, alt, url] = imageMatch;
+            if (url.startsWith('http')) {
+              await addImageFromUrl(url, alt);
+            }
+            continue;
+          }
+          
+          // Handle headings
+          if (trimmedLine.startsWith('###')) {
+            checkNewPage(12);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(12);
+            doc.text(trimmedLine.replace(/^###\s*/, ''), margin, y);
+            y += 10;
+          } else if (trimmedLine.startsWith('##')) {
+            checkNewPage(14);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(13);
+            doc.text(trimmedLine.replace(/^##\s*/, ''), margin, y);
+            y += 12;
+          } else if (trimmedLine.startsWith('#')) {
+            checkNewPage(16);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(14);
+            doc.text(trimmedLine.replace(/^#\s*/, ''), margin, y);
+            y += 14;
+          }
+          // Handle bullet points
+          else if (trimmedLine.match(/^[-*•]\s/) || trimmedLine.includes('•')) {
+            checkNewPage(8);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(11);
+            const bulletText = trimmedLine.replace(/^[-*•]\s*/, '');
+            const bulletLines = doc.splitTextToSize('• ' + bulletText, contentWidth - 10);
+            bulletLines.forEach((bLine: string) => {
+              checkNewPage(6);
+              doc.text(bLine, margin + 5, y);
+              y += 6;
+            });
+            y += 2;
+          }
+          // Handle numbered lists
+          else if (trimmedLine.match(/^\d+\.\s/)) {
+            checkNewPage(8);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(11);
+            const listLines = doc.splitTextToSize(trimmedLine, contentWidth - 10);
+            listLines.forEach((lLine: string, idx: number) => {
+              checkNewPage(6);
+              doc.text(lLine, margin + (idx === 0 ? 0 : 15), y);
+              y += 6;
+            });
+            y += 2;
+          }
+          // Regular text
+          else {
+            checkNewPage(8);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(11);
+            doc.setTextColor(0, 0, 0);
+            
+            // Clean markdown formatting
+            let cleanText = trimmedLine
+              .replace(/\*\*(.*?)\*\*/g, '$1') // Bold
+              .replace(/\*(.*?)\*/g, '$1')     // Italic
+              .replace(/`(.*?)`/g, '$1');      // Code
+            
+            const textLines = doc.splitTextToSize(cleanText, contentWidth);
+            textLines.forEach((tLine: string) => {
+              checkNewPage(6);
+              doc.text(tLine, margin, y);
+              y += 6;
+            });
+            y += 4;
+          }
         }
-        doc.text(`- [${i + 1}] ${url}`, 15, y);
-        y += 5;
-      });
-      doc.setTextColor(30);
+        
+        y += 6;
+
+        // Sources
+        if (message.sources && message.sources.length > 0) {
+          checkNewPage(15);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(11);
+          doc.text('Sources:', margin, y);
+          y += 10;
+          
+          message.sources.forEach((source: any, i: number) => {
+            checkNewPage(8);
+            const title = source.metadata?.title || 'Source';
+            const url = source.metadata?.url || '';
+            
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(10);
+            
+            const sourceText = `${i + 1}. ${title.substring(0, 60)}${title.length > 60 ? '...' : ''}`;
+            
+            if (url && url !== 'File') {
+              doc.setTextColor(0, 0, 255);
+              doc.textWithLink(sourceText, margin + 5, y, { url: url });
+              doc.setTextColor(0, 0, 0);
+            } else {
+              doc.text(sourceText, margin + 5, y);
+            }
+            
+            y += 7;
+          });
+          y += 8;
+        }
+        
+        // Add divider after each assistant response (except the last one)
+        if (index < messages.length - 1) {
+          addDivider();
+        }
+      }
+      
+      // Allow UI to breathe every few messages
+      if (index % 3 === 0) {
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
     }
-    y += 6;
-    doc.setDrawColor(230);
-    if (y > pageHeight - 10) {
-      doc.addPage();
-      y = 15;
+
+    // Save
+    const filename = userQuery.substring(0, 50).replace(/[^a-zA-Z0-9\s]/g, '') || 'chat';
+    doc.save(`${filename}.pdf`);
+
+    // Reset button state
+    if (button && originalText) {
+      button.textContent = originalText;
+      button.style.pointerEvents = 'auto';
     }
-    doc.line(10, y, 200, y);
-    y += 4;
-  });
-  doc.save(`${title || 'chat'}.pdf`);
+
+  } catch (error) {
+    console.error('PDF generation failed:', error);
+    // Reset button state on error
+    const button = document.querySelector('[data-pdf-export]') as HTMLElement;
+    if (button) {
+      button.textContent = 'Export as PDF';
+      button.style.pointerEvents = 'auto';
+    }
+  }
 };
 
 const Navbar = ({
@@ -312,6 +534,7 @@ const Navbar = ({
                 <button
                   className="flex items-center gap-2 px-4 py-2 text-left hover:bg-light-secondary dark:hover:bg-dark-secondary transition-colors text-black dark:text-white rounded-lg font-medium"
                   onClick={() => exportAsPDF(messages, title || '')}
+                  data-pdf-export
                 >
                   <FileDown size={17} className="text-[#24A0ED]" />
                   Export as PDF
