@@ -692,7 +692,7 @@ const Focus = ({
                           <Search className="text-black/40 dark:text-white/40" size={16} />
                         </div>
                         <p className="text-black/60 dark:text-white/60 text-sm">
-                          No templates found matching "{searchQuery}"
+                          No templates found matching &quot;{searchQuery}&quot;
                           {selectedCategory !== 'all' && ` in ${selectedCategory}`}
                         </p>
                       </div>

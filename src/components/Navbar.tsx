@@ -133,7 +133,9 @@ const Navbar = ({
   focusMode?: string;
 }) => {
   const [title, setTitle] = useState<string>('');
+  const [currentTitle, setCurrentTitle] = useState<string>('');
   const [timeAgo, setTimeAgo] = useState<string>('');
+  const [showTitle, setShowTitle] = useState<boolean>(false);
   const { isExpanded } = useSidebar();
   const router = useRouter();
 
@@ -156,6 +158,7 @@ const Navbar = ({
           ? `${messages[0].content.substring(0, 20).trim()}...`
           : messages[0].content;
       setTitle(newTitle);
+      setCurrentTitle(newTitle); // Initialize current title
       const newTimeAgo = formatTimeDifference(
         new Date(),
         messages[0].createdAt,
@@ -178,6 +181,45 @@ const Navbar = ({
     return () => clearInterval(intervalId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollY = window.scrollY;
+      setShowTitle(scrollY > 100);
+      
+      // Find which message is currently in view
+      if (messages.length > 0) {
+        // Get all user message elements (these contain the titles we want to track)
+        const messageElements = document.querySelectorAll('[data-message-index]');
+        let currentMessageIndex = 0;
+        
+        // Find the topmost user message that has passed the navbar (100px from top)
+        for (let i = messageElements.length - 1; i >= 0; i--) {
+          const element = messageElements[i] as HTMLElement;
+          const rect = element.getBoundingClientRect();
+          const messageIndex = parseInt(element.getAttribute('data-message-index') || '0');
+          
+          // If the message has scrolled past the navbar area (100px), use this message
+          if (rect.top <= 100) {
+            currentMessageIndex = messageIndex;
+            break;
+          }
+        }
+        
+        // Update current title based on the determined message
+        if (messages[currentMessageIndex] && messages[currentMessageIndex].role === 'user') {
+          const messageContent = messages[currentMessageIndex].content;
+          const displayTitle = messageContent.length > 50
+            ? `${messageContent.substring(0, 50).trim()}...`
+            : messageContent;
+          setCurrentTitle(displayTitle);
+        }
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [messages]);
 
   return (
     <div className={cn(
@@ -232,16 +274,17 @@ const Navbar = ({
           </span>
         </button>
         
-        {/* Separator */}
-        <div className="w-px h-4 bg-light-200 dark:bg-dark-200" />
-        
-        {/* Time */}
-        <div className="flex items-center gap-2">
-          <Clock size={17} />
-          <p className="text-xs">{timeAgo} ago</p>
-        </div>
+        {/* Show title when scrolled */}
+        {showTitle && (
+          <>
+            <div className="w-px h-4 bg-light-200 dark:bg-dark-200" />
+            <div className="flex items-center">
+              <p className="text-lg font-semibold truncate max-w-lg">{currentTitle || title}</p>
+            </div>
+          </>
+        )}
       </div>
-      <p className="hidden lg:flex">{title}</p>
+      <p className={cn("hidden lg:flex transition-opacity duration-300", showTitle ? "opacity-0" : "opacity-100")}>{title}</p>
 
       <div className="flex flex-row items-center space-x-4">
         <Popover className="relative">

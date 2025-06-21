@@ -1,161 +1,72 @@
 /* eslint-disable @next/next/no-img-element */
-import {
-  Dialog,
-  DialogPanel,
-  DialogTitle,
-  Transition,
-  TransitionChild,
-} from '@headlessui/react';
 import { Document } from '@langchain/core/documents';
-import { File } from 'lucide-react';
-import { Fragment, useState } from 'react';
+import { File, ChevronRight } from 'lucide-react';
 
-const MessageSources = ({ sources }: { sources: Document[] }) => {
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+interface MessageSourcesProps {
+  sources: Document[];
+  onViewSources?: (sources: Document[], messageIndex: number) => void;
+  messageIndex: number;
+}
 
-  const closeModal = () => {
-    setIsDialogOpen(false);
-    document.body.classList.remove('overflow-hidden-scrollable');
-  };
-
-  const openModal = () => {
-    setIsDialogOpen(true);
-    document.body.classList.add('overflow-hidden-scrollable');
-  };
+const MessageSources = ({ sources, onViewSources, messageIndex }: MessageSourcesProps) => {
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-1.5">
       {sources.slice(0, 3).map((source, i) => (
         <a
-          className="bg-light-100 hover:bg-light-200 dark:bg-dark-100 dark:hover:bg-dark-200 transition duration-200 rounded-lg p-3 flex flex-col space-y-2 font-medium"
+          className="group bg-white dark:bg-dark-secondary hover:bg-light-50 dark:hover:bg-dark-100 border border-light-200 dark:border-dark-200 transition-all duration-200 rounded-lg p-2 flex flex-col space-y-1"
           key={i}
           href={source.metadata.url}
           target="_blank"
+          rel="noopener noreferrer"
         >
-          <p className="dark:text-white text-xs overflow-hidden whitespace-nowrap text-ellipsis">
-            {source.metadata.title}
-          </p>
-          <div className="flex flex-row items-center justify-between">
-            <div className="flex flex-row items-center space-x-1">
-              {source.metadata.url === 'File' ? (
-                <div className="bg-dark-200 hover:bg-dark-100 transition duration-200 flex items-center justify-center w-6 h-6 rounded-full">
-                  <File size={12} className="text-white/70" />
-                </div>
-              ) : (
-                <img
-                  src={`https://s2.googleusercontent.com/s2/favicons?domain_url=${source.metadata.url}`}
-                  width={16}
-                  height={16}
-                  alt="favicon"
-                  className="rounded-lg h-4 w-4"
-                />
-              )}
-              <p className="text-xs text-black/50 dark:text-white/50 overflow-hidden whitespace-nowrap text-ellipsis">
-                {source.metadata.url.replace(/.+\/\/|www.|\..+/g, '')}
+          <div className="flex items-start gap-2">
+            {source.metadata.url === 'File' ? (
+              <div className="p-1 bg-gray-100 dark:bg-gray-700 rounded flex-shrink-0">
+                <File size={12} className="text-gray-600 dark:text-gray-300" />
+              </div>
+            ) : (
+              <img
+                src={`https://s2.googleusercontent.com/s2/favicons?domain_url=${source.metadata.url}`}
+                width={14}
+                height={14}
+                alt="favicon"
+                className="rounded mt-0.5 flex-shrink-0"
+              />
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-black dark:text-white line-clamp-2 leading-tight">
+                {source.metadata.title}
               </p>
-            </div>
-            <div className="flex flex-row items-center space-x-1 text-black/50 dark:text-white/50 text-xs">
-              <div className="bg-black/50 dark:bg-white/50 h-[4px] w-[4px] rounded-full" />
-              <span>{i + 1}</span>
+              <div className="flex items-center justify-between mt-1">
+                <p className="text-xs text-gray-500 dark:text-gray-400 truncate flex-1">
+                  {source.metadata.url.replace(/.+\/\/|www.|\..+/g, '')}
+                </p>
+                <div className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500 flex-shrink-0 ml-1">
+                  <div className="w-1 h-1 bg-current rounded-full" />
+                  <span>{i + 1}</span>
+                </div>
+              </div>
             </div>
           </div>
         </a>
       ))}
-      {sources.length > 3 && (
-        <button
-          onClick={openModal}
-          className="bg-light-100 hover:bg-light-200 dark:bg-dark-100 dark:hover:bg-dark-200 transition duration-200 rounded-lg p-3 flex flex-col space-y-2 font-medium"
-        >
-          <div className="flex flex-row items-center space-x-1">
-            {sources.slice(3, 6).map((source, i) => {
-              return source.metadata.url === 'File' ? (
-                <div
-                  key={i}
-                  className="bg-dark-200 hover:bg-dark-100 transition duration-200 flex items-center justify-center w-6 h-6 rounded-full"
-                >
-                  <File size={12} className="text-white/70" />
-                </div>
-              ) : (
-                <img
-                  key={i}
-                  src={`https://s2.googleusercontent.com/s2/favicons?domain_url=${source.metadata.url}`}
-                  width={16}
-                  height={16}
-                  alt="favicon"
-                  className="rounded-lg h-4 w-4"
-                />
-              );
-            })}
-          </div>
-          <p className="text-xs text-black/50 dark:text-white/50">
-            View {sources.length - 3} more
-          </p>
-        </button>
-      )}
-      <Transition appear show={isDialogOpen} as={Fragment}>
-        <Dialog as="div" className="relative z-50" onClose={closeModal}>
-          <div className="fixed inset-0 overflow-y-auto">
-            <div className="flex min-h-full items-center justify-center p-4 text-center">
-              <TransitionChild
-                as={Fragment}
-                enter="ease-out duration-200"
-                enterFrom="opacity-0 scale-95"
-                enterTo="opacity-100 scale-100"
-                leave="ease-in duration-100"
-                leaveFrom="opacity-100 scale-200"
-                leaveTo="opacity-0 scale-95"
-              >
-                <DialogPanel className="w-full max-w-md transform rounded-2xl bg-light-secondary dark:bg-dark-secondary border border-light-200 dark:border-dark-200 p-6 text-left align-middle shadow-xl transition-all">
-                  <DialogTitle className="text-lg font-medium leading-6 dark:text-white">
-                    Sources
-                  </DialogTitle>
-                  <div className="grid grid-cols-2 gap-2 overflow-auto max-h-[300px] mt-2 pr-2">
-                    {sources.map((source, i) => (
-                      <a
-                        className="bg-light-secondary hover:bg-light-200 dark:bg-dark-secondary dark:hover:bg-dark-200 border border-light-200 dark:border-dark-200 transition duration-200 rounded-lg p-3 flex flex-col space-y-2 font-medium"
-                        key={i}
-                        href={source.metadata.url}
-                        target="_blank"
-                      >
-                        <p className="dark:text-white text-xs overflow-hidden whitespace-nowrap text-ellipsis">
-                          {source.metadata.title}
-                        </p>
-                        <div className="flex flex-row items-center justify-between">
-                          <div className="flex flex-row items-center space-x-1">
-                            {source.metadata.url === 'File' ? (
-                              <div className="bg-dark-200 hover:bg-dark-100 transition duration-200 flex items-center justify-center w-6 h-6 rounded-full">
-                                <File size={12} className="text-white/70" />
-                              </div>
-                            ) : (
-                              <img
-                                src={`https://s2.googleusercontent.com/s2/favicons?domain_url=${source.metadata.url}`}
-                                width={16}
-                                height={16}
-                                alt="favicon"
-                                className="rounded-lg h-4 w-4"
-                              />
-                            )}
-                            <p className="text-xs text-black/50 dark:text-white/50 overflow-hidden whitespace-nowrap text-ellipsis">
-                              {source.metadata.url.replace(
-                                /.+\/\/|www.|\..+/g,
-                                '',
-                              )}
-                            </p>
-                          </div>
-                          <div className="flex flex-row items-center space-x-1 text-black/50 dark:text-white/50 text-xs">
-                            <div className="bg-black/50 dark:bg-white/50 h-[4px] w-[4px] rounded-full" />
-                            <span>{i + 1}</span>
-                          </div>
-                        </div>
-                      </a>
-                    ))}
-                  </div>
-                </DialogPanel>
-              </TransitionChild>
-            </div>
-          </div>
-        </Dialog>
-      </Transition>
+      
+      {/* View all sources card */}
+      <button
+        onClick={() => onViewSources?.(sources, messageIndex)}
+        className="group bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-900/30 dark:hover:to-indigo-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-2 flex flex-col justify-center items-center transition-all duration-200"
+      >
+        <div className="p-1 bg-blue-100 dark:bg-blue-800 rounded-lg mb-1">
+          <ChevronRight size={12} className="text-blue-600 dark:text-blue-300 group-hover:translate-x-0.5 transition-transform duration-200" />
+        </div>
+        <p className="text-xs font-medium text-blue-700 dark:text-blue-300 text-center">
+          View all {sources.length}
+        </p>
+        <p className="text-xs text-blue-600 dark:text-blue-400 text-center">
+          sources
+        </p>
+      </button>
     </div>
   );
 };

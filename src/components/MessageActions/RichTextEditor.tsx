@@ -211,7 +211,7 @@ const RichTextEditor = ({
             const alt = element.getAttribute('alt') || '';
             // Handle both regular images and base64 images
             if (src) {
-              return `![${alt}](${src})`;
+            return `![${alt}](${src})`;
             }
             return '';
           case 'iframe':
@@ -531,12 +531,12 @@ const RichTextEditor = ({
     const container = document.createElement('div');
     container.style.display = 'block';
     container.style.margin = '1em 0';
-
-    // Create image element
-    const img = document.createElement('img');
+          
+          // Create image element
+          const img = document.createElement('img');
     img.src = src;
-    img.style.maxWidth = '100%';
-    img.style.height = 'auto';
+          img.style.maxWidth = '100%';
+          img.style.height = 'auto';
     img.alt = alt;
     img.title = alt;
     img.style.display = 'block';
@@ -563,17 +563,17 @@ const RichTextEditor = ({
       sourceLink.innerHTML = `Source: <a href="${sourceUrl}" target="_blank" rel="noopener noreferrer" style="color: #3b82f6; text-decoration: underline;">${websiteName}</a>`;
       container.appendChild(sourceLink);
     }
-    
-    const selection = window.getSelection();
-    if (selection && selection.rangeCount > 0) {
-      const range = selection.getRangeAt(0);
-      range.deleteContents();
+          
+          const selection = window.getSelection();
+          if (selection && selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            range.deleteContents();
       range.insertNode(container);
       range.setStartAfter(container);
-      range.collapse(true);
-      selection.removeAllRanges();
-      selection.addRange(range);
-    } else {
+            range.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(range);
+          } else {
       editorRef.current.appendChild(container);
     }
     
@@ -797,6 +797,8 @@ const RichTextEditor = ({
     
     setShowAIAssistant(true);
   };
+
+
 
   // Process AI request and apply directly to editor
   const processContextualAI = async (action: string) => {
@@ -1297,7 +1299,7 @@ const RichTextEditor = ({
           {imageLoading ? (
             <div className="animate-spin w-3 h-3 border border-gray-400 border-t-transparent rounded-full" />
           ) : (
-            <Image size={14} />
+          <Image size={14} />
           )}
         </button>
         <button
@@ -1563,12 +1565,12 @@ const RichTextEditor = ({
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-medium text-black dark:text-white">Select Image</h3>
-              <button
+        <button
                 onClick={() => setShowImageSelector(false)}
                 className="p-2 text-black/70 dark:text-white/70 hover:text-black dark:hover:text-white hover:bg-light-secondary dark:hover:bg-dark-secondary rounded transition-colors"
-              >
+        >
                 <X size={20} />
-              </button>
+        </button>
             </div>
             
             {imageLoading ? (
@@ -1606,13 +1608,13 @@ const RichTextEditor = ({
                   ))}
                 </div>
                 <div className="pt-4 border-t border-light-200 dark:border-dark-200">
-                  <button
+        <button
                     onClick={insertImageFromFile}
                     className="w-full px-4 py-2 text-sm font-medium text-black/70 dark:text-white/70 hover:text-black dark:hover:text-white hover:bg-light-secondary dark:hover:bg-dark-secondary rounded-lg transition-colors border border-light-200 dark:border-dark-200"
-                  >
+        >
                     Or upload from device
-                  </button>
-                </div>
+        </button>
+      </div>
               </>
             ) : (
               <div className="text-center py-8">
