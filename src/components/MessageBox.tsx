@@ -32,6 +32,10 @@ import {
   Settings,
   Cpu,
   Atom,
+  Download,
+  FileText,
+  FileDown,
+  File,
 } from 'lucide-react';
 import Markdown, { MarkdownToJSX } from 'markdown-to-jsx';
 import Copy from './MessageActions/Copy';
@@ -44,9 +48,685 @@ import { useSpeech } from 'react-text-to-speech';
 import ThinkBox from './ThinkBox';
 import SourcesSidebar from './SourcesSidebar';
 import { Document } from '@langchain/core/documents';
+import {
+  Popover,
+  PopoverButton,
+  PopoverPanel,
+  Transition,
+} from '@headlessui/react';
+import jsPDF from 'jspdf';
+import { Document as DocxDocument, Packer, Paragraph, TextRun, AlignmentType, ImageRun } from 'docx';
+import { saveAs } from 'file-saver';
 
 const ThinkTagProcessor = ({ children }: { children: React.ReactNode }) => {
   return <ThinkBox content={children as string} />;
+};
+
+// Export functions for individual messages
+const downloadFile = (filename: string, content: string, type: string) => {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 0);
+};
+
+const exportMessageAsMarkdown = (message: Message, userMessage?: Message) => {
+  const date = new Date(message.createdAt || Date.now()).toLocaleString();
+  const title = userMessage?.content || message.content;
+  const shortContent = title.substring(0, 40).replace(/[^a-zA-Z0-9\s]/g, '').trim() || 'message';
+  
+  let md = `# Chat Export: ${shortContent}\n\n`;
+  md += `*Exported on: ${date}*\n\n---\n`;
+  
+  // Add user message if available and this is an assistant response
+  if (userMessage && message.role === 'assistant') {
+    md += `\n---\n`;
+    md += `**User**  \n`;
+    md += `*${new Date(userMessage.createdAt).toLocaleString()}*\n\n`;
+    md += `> ${userMessage.content.replace(/\n/g, '\n> ')}\n`;
+  }
+  
+  md += `\n---\n`;
+  md += `**${message.role === 'user' ? 'User' : 'Assistant'}**  \n`;
+  md += `*${new Date(message.createdAt).toLocaleString()}*\n\n`;
+  md += `> ${message.content.replace(/\n/g, '\n> ')}\n`;
+  
+  if (message.sources && message.sources.length > 0) {
+    md += `\n**Citations:**\n`;
+    message.sources.forEach((src: any, i: number) => {
+      const url = src.metadata?.url || '';
+      md += `- [${i + 1}] [${url}](${url})\n`;
+    });
+  }
+  md += '\n---\n';
+  
+  downloadFile(`${shortContent}.md`, md, 'text/markdown');
+};
+
+const exportMessageAsPDF = async (message: Message, userMessage?: Message) => {
+  try {
+    const doc = new jsPDF();
+    const margin = 20;
+    const contentWidth = doc.internal.pageSize.width - (margin * 2);
+    let y = margin;
+
+    const checkNewPage = (space: number) => {
+      if (y + space > doc.internal.pageSize.height - 20) {
+        doc.addPage();
+        y = margin;
+      }
+    };
+
+    // Helper function to draw a nice divider
+    const addDivider = () => {
+      checkNewPage(15);
+      y += 5;
+      
+      // Draw a subtle line with dots
+      doc.setDrawColor(200, 200, 200); // Light gray
+      doc.setLineWidth(0.5);
+      
+      // Main line
+      doc.line(margin, y, doc.internal.pageSize.width - margin, y);
+      
+      // Add small decorative dots
+      doc.setFillColor(150, 150, 150);
+      const centerX = doc.internal.pageSize.width / 2;
+      doc.circle(centerX - 10, y, 1, 'F');
+      doc.circle(centerX, y, 1, 'F');
+      doc.circle(centerX + 10, y, 1, 'F');
+      
+      y += 10;
+    };
+
+    // Brand name
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(0, 0, 0);
+    doc.text('Perplexica', margin, y);
+    y += 20;
+
+    // Main title (user question or message content)
+    const title = userMessage?.content || message.content;
+    const shortContent = title.substring(0, 80).replace(/[^\w\s]/g, '').trim() || 'Chat Export';
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    const titleLines = doc.splitTextToSize(shortContent, contentWidth);
+    titleLines.forEach((line: string) => {
+      checkNewPage(10);
+      doc.text(line, margin, y);
+      y += 8;
+    });
+    y += 8;
+
+    // Process user message first if this is an assistant response
+    if (userMessage && message.role === 'assistant') {
+      // User question
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      const questionLines = doc.splitTextToSize(userMessage.content, contentWidth);
+      questionLines.forEach((line: string) => {
+        checkNewPage(8);
+        doc.text(line, margin, y);
+        y += 8;
+      });
+      y += 12;
+    }
+
+    // Process assistant response content
+    if (message.role === 'assistant') {
+      let content = message.content
+        .replace(/<think>[\s\S]*?<\/think>/g, '') // Remove think tags
+        .trim();
+      
+      // Split content by lines and process each line
+      const lines = content.split('\n');
+      
+      for (const line of lines) {
+        const trimmedLine = line.trim();
+        if (!trimmedLine) continue;
+        
+        // Handle headings
+        if (trimmedLine.startsWith('###')) {
+          checkNewPage(12);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(12);
+          doc.text(trimmedLine.replace(/^###\s*/, ''), margin, y);
+          y += 10;
+        } else if (trimmedLine.startsWith('##')) {
+          checkNewPage(14);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(13);
+          doc.text(trimmedLine.replace(/^##\s*/, ''), margin, y);
+          y += 12;
+        } else if (trimmedLine.startsWith('#')) {
+          checkNewPage(16);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(14);
+          doc.text(trimmedLine.replace(/^#\s*/, ''), margin, y);
+          y += 14;
+        } else {
+          // Regular text
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(11);
+          doc.setTextColor(0, 0, 0);
+          
+          // Process bold and italic formatting
+          let processedLine = trimmedLine
+            .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold markdown
+            .replace(/\*(.*?)\*/g, '$1') // Remove italic markdown
+            .replace(/`(.*?)`/g, '$1') // Remove code markdown
+            .replace(/\[(\d+)\]/g, ''); // Remove citations
+          
+          const textLines = doc.splitTextToSize(processedLine, contentWidth);
+          textLines.forEach((textLine: string) => {
+            checkNewPage(8);
+            doc.text(textLine, margin, y);
+            y += 6;
+          });
+          y += 2;
+        }
+      }
+    }
+
+    // Sources section
+    if (message.sources && message.sources.length > 0) {
+      y += 10;
+      addDivider();
+      
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(120, 58, 237); // Purple color
+      doc.text('Sources & References', margin, y);
+      y += 15;
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+
+      message.sources.forEach((source: any, i: number) => {
+        checkNewPage(15);
+        const title = source.metadata?.title || 'Source';
+        const url = source.metadata?.url || '';
+        
+        doc.text(`${i + 1}. ${title}`, margin, y);
+        y += 8;
+        
+        if (url && url !== 'File') {
+          doc.setTextColor(37, 99, 235);
+          doc.text(`   ${url}`, margin, y);
+          doc.setTextColor(0, 0, 0);
+          y += 8;
+        }
+        y += 2;
+      });
+    }
+
+    // Footer with elegant divider
+    y += 20;
+    addDivider();
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(9);
+    doc.setTextColor(107, 114, 128);
+    doc.text('Generated by Perplexica AI • Advanced AI Search Engine', margin, y);
+
+    const filename = message.content.substring(0, 40).replace(/[^a-zA-Z0-9\s]/g, '').trim() || 'message';
+    doc.save(`${filename}.pdf`);
+  } catch (error) {
+    console.error('Failed to export PDF:', error);
+  }
+};
+
+const exportMessageAsWord = async (message: Message, userMessage?: Message) => {
+  try {
+    const children = [];
+
+    // Helper function to fetch image and create ImageRun
+    const createImageFromUrl = async (imageUrl: string, altText: string = ''): Promise<ImageRun | null> => {
+      try {
+        const response = await fetch(imageUrl);
+        if (!response.ok) return null;
+        
+        const arrayBuffer = await response.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+        
+        return new ImageRun({
+          data: uint8Array,
+          transformation: {
+            width: 500,
+            height: 375,
+          },
+          type: 'jpg',
+        });
+      } catch (error) {
+        console.error('Failed to load image:', error);
+        return null;
+      }
+    };
+
+    // Helper function to parse text with markdown formatting
+    const parseTextWithFormatting = (text: string): TextRun[] => {
+      const runs: TextRun[] = [];
+      let remaining = text;
+      
+      // Process bold, italic, and code in sequence
+      while (remaining.length > 0) {
+        let matched = false;
+        
+        // Check for bold text **text**
+        const boldMatch = remaining.match(/^(.*?)\*\*(.*?)\*\*/);
+        if (boldMatch) {
+          const [, before, boldText] = boldMatch;
+          if (before) runs.push(new TextRun({ text: before }));
+          runs.push(new TextRun({ text: boldText, bold: true }));
+          remaining = remaining.substring(before.length + boldText.length + 4);
+          matched = true;
+        }
+        
+        // Check for italic text *text*
+        if (!matched) {
+          const italicMatch = remaining.match(/^(.*?)\*(.*?)\*/);
+          if (italicMatch) {
+            const [, before, italicText] = italicMatch;
+            if (before) runs.push(new TextRun({ text: before }));
+            runs.push(new TextRun({ text: italicText, italics: true }));
+            remaining = remaining.substring(before.length + italicText.length + 2);
+            matched = true;
+          }
+        }
+        
+        // Check for code text `text`
+        if (!matched) {
+          const codeMatch = remaining.match(/^(.*?)`(.*?)`/);
+          if (codeMatch) {
+            const [, before, codeText] = codeMatch;
+            if (before) runs.push(new TextRun({ text: before }));
+            runs.push(new TextRun({ 
+              text: codeText, 
+              font: 'Consolas',
+              shading: { fill: 'F5F5F5' },
+              color: '990000'
+            }));
+            remaining = remaining.substring(before.length + codeText.length + 2);
+            matched = true;
+          }
+        }
+        
+        // If no formatting found, take the rest as plain text
+        if (!matched) {
+          if (remaining) runs.push(new TextRun({ text: remaining }));
+          break;
+        }
+      }
+      
+      return runs.length > 0 ? runs : [new TextRun({ text })];
+    };
+
+    // Add document header
+    children.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: 'Perplexica AI Chat Export',
+            bold: true,
+            size: 32,
+            color: '1a56db',
+          }),
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 600 },
+      })
+    );
+
+    // Add export date
+    const exportDate = new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    
+    children.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: `Exported on ${exportDate}`,
+            italics: true,
+            color: '666666',
+            size: 18,
+          }),
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 400 },
+      })
+    );
+
+    // Add horizontal line
+    children.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+            color: 'CCCCCC',
+          }),
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 400 },
+      })
+    );
+
+    // Add user message first if this is an assistant response
+    if (userMessage && message.role === 'assistant') {
+      children.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: 'User',
+              bold: true,
+              size: 20,
+              color: '22C55E',
+            }),
+          ],
+          spacing: { after: 200 },
+        })
+      );
+
+      children.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: new Date(userMessage.createdAt).toLocaleString(),
+              italics: true,
+              color: '666666',
+              size: 16,
+            }),
+          ],
+          spacing: { after: 300 },
+        })
+      );
+
+      const userParagraphs = userMessage.content.split('\n\n');
+      userParagraphs.forEach(paragraph => {
+        if (paragraph.trim()) {
+          children.push(
+            new Paragraph({
+              children: parseTextWithFormatting(paragraph.trim()),
+              spacing: { after: 240 },
+            })
+          );
+        }
+      });
+
+      // Add divider after user message
+      children.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+              color: 'D1D5DB',
+            }),
+          ],
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 300, after: 300 },
+        })
+      );
+    }
+
+    // Add assistant message if applicable
+    if (message.role === 'assistant') {
+      children.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: 'Assistant',
+              bold: true,
+              size: 20,
+              color: '3B82F6',
+            }),
+          ],
+          spacing: { after: 200 },
+        })
+      );
+
+      children.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: new Date(message.createdAt).toLocaleString(),
+              italics: true,
+              color: '666666',
+              size: 16,
+            }),
+          ],
+          spacing: { after: 300 },
+        })
+      );
+    }
+
+    // Process message content
+    let content = message.content
+      .replace(/<think>[\s\S]*?<\/think>/g, '')
+      .trim();
+
+    // Split content into paragraphs and process each
+    const paragraphs = content.split('\n\n');
+    
+    for (const paragraph of paragraphs) {
+      if (!paragraph.trim()) continue;
+      
+      const lines = paragraph.split('\n');
+      
+      for (const line of lines) {
+        const trimmedLine = line.trim();
+        if (!trimmedLine) continue;
+        
+        // Check for images
+        const imageMatch = trimmedLine.match(/!\[([^\]]*)\]\(([^)]+)\)/);
+        if (imageMatch) {
+          const [, alt, url] = imageMatch;
+          if (url.startsWith('http')) {
+            try {
+              const imageRun = await createImageFromUrl(url, alt);
+              if (imageRun) {
+                children.push(
+                  new Paragraph({
+                    children: [imageRun],
+                    spacing: { after: 240 },
+                    alignment: AlignmentType.CENTER,
+                  })
+                );
+                
+                if (alt) {
+                  children.push(
+                    new Paragraph({
+                      children: [
+                        new TextRun({
+                          text: alt,
+                          italics: true,
+                          size: 16,
+                          color: '666666',
+                        }),
+                      ],
+                      spacing: { after: 240 },
+                      alignment: AlignmentType.CENTER,
+                    })
+                  );
+                }
+              }
+            } catch (error) {
+              console.error('Failed to process image:', error);
+            }
+          }
+          continue;
+        }
+        
+        // Handle headings
+        if (trimmedLine.startsWith('###')) {
+          children.push(
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: trimmedLine.replace(/^###\s*/, ''),
+                  bold: true,
+                  size: 18,
+                }),
+              ],
+              spacing: { before: 240, after: 120 },
+            })
+          );
+        } else if (trimmedLine.startsWith('##')) {
+          children.push(
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: trimmedLine.replace(/^##\s*/, ''),
+                  bold: true,
+                  size: 20,
+                }),
+              ],
+              spacing: { before: 300, after: 150 },
+            })
+          );
+        } else if (trimmedLine.startsWith('#')) {
+          children.push(
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: trimmedLine.replace(/^#\s*/, ''),
+                  bold: true,
+                  size: 22,
+                }),
+              ],
+              spacing: { before: 360, after: 180 },
+            })
+          );
+        } else {
+          // Regular paragraph
+          children.push(
+            new Paragraph({
+              children: parseTextWithFormatting(trimmedLine),
+              spacing: { after: 200 },
+            })
+          );
+        }
+      }
+    }
+
+    // Add sources section
+    if (message.sources && message.sources.length > 0) {
+      children.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: 'Sources & References',
+              bold: true,
+              size: 18,
+              color: '7C3AED',
+            }),
+          ],
+          spacing: { before: 400, after: 200 },
+        })
+      );
+
+      message.sources.forEach((source: any, i: number) => {
+        const title = source.metadata?.title || 'Source';
+        const url = source.metadata?.url || '';
+        
+        children.push(
+          new Paragraph({
+            children: [
+              new TextRun({ text: `${i + 1}. `, bold: true }),
+              new TextRun({ text: title }),
+              ...(url && url !== 'File' ? [
+                new TextRun({ text: '\n   ' }),
+                new TextRun({ text: url, color: '2563EB', underline: {} }),
+              ] : []),
+            ],
+            spacing: { after: 120 },
+            indent: { left: 300 },
+          })
+        );
+      });
+
+      // Add divider after sources
+      children.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+              color: 'D1D5DB',
+            }),
+          ],
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 300, after: 300 },
+        })
+      );
+    }
+
+    // Add footer
+    children.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+            color: 'CCCCCC',
+          }),
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 500, after: 200 },
+      })
+    );
+
+    children.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: 'Generated by Perplexica AI • Advanced AI Search Engine',
+            italics: true,
+            color: '6B7280',
+            size: 16,
+          }),
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 100 },
+      })
+    );
+
+    // Create document with proper styling
+    const doc = new DocxDocument({
+      sections: [
+        {
+          properties: {
+            page: {
+              margin: {
+                top: 1440,    // 1 inch
+                right: 1440,  // 1 inch  
+                bottom: 1440, // 1 inch
+                left: 1440,   // 1 inch
+              },
+            },
+          },
+          children: children,
+        },
+      ],
+    });
+
+    // Generate and save
+    const blob = await Packer.toBlob(doc);
+    const shortContent = message.content.substring(0, 40).replace(/[^a-zA-Z0-9\s]/g, '').trim() || 'message';
+    saveAs(blob, `${shortContent}.docx`);
+
+  } catch (error) {
+    console.error('Failed to export Word document:', error);
+  }
 };
 
 const MessageBox = ({
@@ -323,6 +1003,48 @@ const MessageBox = ({
                             <Volume2 size={18} />
                           )}
                         </button>
+                        
+                        {/* Export Dropdown */}
+                        <Popover className="relative">
+                          <PopoverButton className="p-2 text-black/70 dark:text-white/70 rounded-xl hover:bg-light-secondary dark:hover:bg-dark-secondary transition duration-200 hover:text-black dark:hover:text-white">
+                            <Download size={18} />
+                          </PopoverButton>
+                          
+                          <Transition
+                            enter="transition ease-out duration-150"
+                            enterFrom="opacity-0 translate-y-1"
+                            enterTo="opacity-100 translate-y-0"
+                            leave="transition ease-in duration-150"
+                            leaveFrom="opacity-100 translate-y-0"
+                            leaveTo="opacity-0 translate-y-1"
+                          >
+                            <PopoverPanel className="absolute right-0 top-full mt-2 w-48 rounded-lg bg-white dark:bg-dark-secondary shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
+                              <div className="flex flex-col py-3 px-3 gap-2">
+                                <button
+                                  className="flex items-center gap-2 px-4 py-2 text-left hover:bg-light-secondary dark:hover:bg-dark-primary transition-colors text-black dark:text-white rounded-lg font-medium"
+                                  onClick={() => exportMessageAsMarkdown(message, message.role === 'assistant' && messageIndex > 0 ? history[messageIndex - 1] : undefined)}
+                                >
+                                  <FileText size={17} className="text-[#24A0ED]" />
+                                  Export as Markdown
+                                </button>
+                                <button
+                                  className="flex items-center gap-2 px-4 py-2 text-left hover:bg-light-secondary dark:hover:bg-dark-primary transition-colors text-black dark:text-white rounded-lg font-medium"
+                                  onClick={() => exportMessageAsPDF(message, message.role === 'assistant' && messageIndex > 0 ? history[messageIndex - 1] : undefined)}
+                                >
+                                  <FileDown size={17} className="text-[#24A0ED]" />
+                                  Export as PDF
+                                </button>
+                                <button
+                                  className="flex items-center gap-2 px-4 py-2 text-left hover:bg-light-secondary dark:hover:bg-dark-primary transition-colors text-black dark:text-white rounded-lg font-medium"
+                                  onClick={() => exportMessageAsWord(message, message.role === 'assistant' && messageIndex > 0 ? history[messageIndex - 1] : undefined)}
+                                >
+                                  <File size={17} className="text-[#24A0ED]" />
+                                  Export as Word
+                                </button>
+                              </div>
+                            </PopoverPanel>
+                          </Transition>
+                        </Popover>
                       </div>
                     </div>
                   )}

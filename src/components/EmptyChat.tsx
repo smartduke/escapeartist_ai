@@ -4,11 +4,11 @@ import EmptyChatMessageInput from './EmptyChatMessageInput';
 import { File } from './ChatWindow';
 import Link from 'next/link';
 import { useAuth } from '@/components/auth/AuthProvider';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { AuthModal } from '@/components/auth/AuthModal';
 import RecentChats from './RecentChats';
 
-import { allTemplates } from './MessageInputActions/Focus';
+import { allTemplates, FocusRef } from './MessageInputActions/Focus';
 
 const EmptyChat = ({
   sendMessage,
@@ -37,6 +37,7 @@ const EmptyChat = ({
   const [isTextareaFocused, setIsTextareaFocused] = useState(false);
   const [textareaRef, setTextareaRef] = useState<HTMLTextAreaElement | null>(null);
   const [isClickingPrompt, setIsClickingPrompt] = useState(false);
+  const focusRef = useRef<FocusRef | null>(null);
 
   // Find current template data
   const currentTemplate = allTemplates.find(template => template.key === focusMode);
@@ -47,15 +48,7 @@ const EmptyChat = ({
   console.log('Textarea focused:', isTextareaFocused);
   console.log('Should show prompts:', !!(currentTemplate && currentTemplate.quickPrompts && isTextareaFocused));
 
-  // Auto-focus textarea when agent changes
-  useEffect(() => {
-    if (textareaRef) {
-      // Small delay to ensure the component has rendered
-      setTimeout(() => {
-        textareaRef.focus();
-      }, 150);
-    }
-  }, [focusMode, textareaRef]);
+
 
 
 
@@ -66,8 +59,8 @@ const EmptyChat = ({
           <Settings className="cursor-pointer lg:hidden text-black/70 dark:text-white/70 hover:text-black dark:hover:text-white transition-colors" />
         </Link>
       </div>
-      <div className="flex flex-col items-center justify-center min-h-screen max-w-screen-lg mx-auto p-4 lg:p-8 space-y-6 lg:space-y-8" style={{ transform: 'translateY(-80px)' }}>
-        <div className="flex flex-col w-full space-y-6">
+      <div className="flex flex-col items-center min-h-screen max-w-screen-lg mx-auto p-4 lg:p-8 pt-32 lg:pt-40">
+        <div className="flex flex-col w-full space-y-6 lg:space-y-8">
           <div className={`space-y-4 max-w-3xl mx-auto ${currentTemplate && currentTemplate.greeting ? 'text-left' : 'text-center'}`}>
             {/* Template Icon - only show for selected templates */}
             {currentTemplate && currentTemplate.icon && currentTemplate.greeting && (
@@ -105,6 +98,7 @@ const EmptyChat = ({
                 setIsTextareaFocused(focused);
               }}
               onTextareaRef={setTextareaRef}
+              onFocusRef={(ref) => { focusRef.current = ref; }}
               showQuickPrompts={currentTemplate && currentTemplate.quickPrompts && isTextareaFocused}
             />
 
@@ -150,7 +144,11 @@ const EmptyChat = ({
           </div>
           
           {/* Recent Chats */}
-          <RecentChats focusMode={focusMode} />
+          <RecentChats 
+            focusMode={focusMode} 
+            setFocusMode={setFocusMode} 
+            onOpenTemplatePopup={() => focusRef.current?.openTemplatePopup()}
+          />
         </div>
       </div>
       

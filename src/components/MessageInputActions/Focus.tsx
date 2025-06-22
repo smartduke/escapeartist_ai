@@ -456,15 +456,17 @@ const templateCategories = [
 // Flatten for easy lookup
 const allTemplates = templateCategories.flatMap(category => category.templates);
 
-const Focus = ({
-  focusMode,
-  setFocusMode,
-  onTemplateSelect,
-}: {
+export interface FocusRef {
+  openTemplatePopup: () => void;
+}
+
+const Focus = React.forwardRef<FocusRef, {
   focusMode: string;
   setFocusMode: (mode: string) => void;
-  onTemplateSelect?: () => void;
-}) => {
+}>(({
+  focusMode,
+  setFocusMode,
+}, ref) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -486,11 +488,12 @@ const Focus = ({
     setIsOpen(false);
     setSearchQuery('');
     setSelectedCategory('all');
-    // Trigger focus after modal closes with longer delay
-    setTimeout(() => {
-      onTemplateSelect?.();
-    }, 300); // Longer delay to ensure modal transition completes
   };
+
+  // Expose the openTemplatePopup function via ref
+  React.useImperativeHandle(ref, () => ({
+    openTemplatePopup: () => setIsOpen(true)
+  }));
   
   return (
     <>
@@ -706,7 +709,9 @@ const Focus = ({
       </Transition>
     </>
   );
-};
+});
+
+Focus.displayName = 'Focus';
 
 export default Focus;
 export { templateCategories, allTemplates };

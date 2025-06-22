@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { formatTimeDifference } from '@/lib/utils';
-import { Clock, MessageSquare } from 'lucide-react';
+import { Clock, MessageSquare, Sparkles, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { allTemplates } from './MessageInputActions/Focus';
 
@@ -14,9 +14,11 @@ export interface Chat {
 
 interface RecentChatsProps {
   focusMode: string;
+  setFocusMode?: (mode: string) => void;
+  onOpenTemplatePopup?: () => void;
 }
 
-const RecentChats: React.FC<RecentChatsProps> = ({ focusMode }) => {
+const RecentChats: React.FC<RecentChatsProps> = ({ focusMode, setFocusMode, onOpenTemplatePopup }) => {
   const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(true);
   const { user, guestId } = useAuth();
@@ -65,8 +67,70 @@ const RecentChats: React.FC<RecentChatsProps> = ({ focusMode }) => {
     fetchChats();
   }, [user, guestId, focusMode]);
 
-  // Don't render if loading, no chats, or All Sources template
-  if (loading || chats.length === 0 || focusMode === 'webSearch') {
+
+
+  // Define popular templates to show when All Sources is selected
+  const popularTemplates = [
+    allTemplates.find(t => t.key === 'newsSearch'),
+    allTemplates.find(t => t.key === 'academicSearch'),
+    allTemplates.find(t => t.key === 'shoppingSearch'),
+    allTemplates.find(t => t.key === 'codingSearch'),
+    allTemplates.find(t => t.key === 'travelSearch'),
+    allTemplates.find(t => t.key === 'financeSearch'),
+    allTemplates.find(t => t.key === 'medicalSearch'),
+    allTemplates.find(t => t.key === 'jobSearch'),
+    allTemplates.find(t => t.key === 'writingAssistant'),
+  ].filter(Boolean);
+
+  // Show popular templates when All Sources is selected
+  if (focusMode === 'webSearch') {
+    return (
+      <div className="w-full max-w-3xl mx-auto mt-12">
+        <div className="flex items-center gap-2 mb-3 px-1">
+          <Sparkles size={16} className="text-black/60 dark:text-white/60" />
+          <h3 className="text-sm font-medium text-black/70 dark:text-white/70">
+            Popular templates
+          </h3>
+        </div>
+        
+        <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+          {popularTemplates.map((template) => template && (
+            <button
+              key={template.key}
+              onClick={() => setFocusMode?.(template.key)}
+              className="group flex flex-col items-center gap-2 p-3 bg-light-secondary/50 dark:bg-dark-secondary/50 hover:bg-light-secondary dark:hover:bg-dark-secondary border border-light-200/50 dark:border-dark-200/50 hover:border-light-200 dark:hover:border-dark-200 rounded-lg transition-all duration-200 hover:shadow-sm text-center"
+            >
+              <div className="text-blue-600 dark:text-blue-400 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors">
+                {React.cloneElement(template.icon as React.ReactElement, { 
+                  size: 20, 
+                  className: "stroke-[1.5]" 
+                })}
+              </div>
+              <p className="text-xs font-medium text-black dark:text-white text-center leading-tight">
+                {template.title}
+              </p>
+            </button>
+          ))}
+          
+          {/* More button */}
+          <button
+            onClick={() => onOpenTemplatePopup?.()}
+            className="group flex flex-col items-center gap-2 p-3 bg-light-secondary/30 dark:bg-dark-secondary/30 hover:bg-light-secondary dark:hover:bg-dark-secondary border border-dashed border-light-200/50 dark:border-dark-200/50 hover:border-light-200 dark:hover:border-dark-200 rounded-lg transition-all duration-200 hover:shadow-sm text-center"
+          >
+            <div className="text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+              <Plus size={20} className="stroke-[1.5]" />
+            </div>
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors text-center leading-tight">
+              More
+            </p>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render if loading or no chats for other templates
+  if (loading || chats.length === 0) {
     return null;
   }
 

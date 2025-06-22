@@ -1,7 +1,7 @@
 import { ArrowRight, Command } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
-import Focus, { allTemplates } from './MessageInputActions/Focus';
+import Focus, { allTemplates, FocusRef } from './MessageInputActions/Focus';
 import Optimization from './MessageInputActions/Optimization';
 import Attach from './MessageInputActions/Attach';
 import ModelSelector from './MessageInputActions/ModelSelector';
@@ -21,6 +21,7 @@ const EmptyChatMessageInput = ({
   onFocusChange,
   onTextareaRef,
   showQuickPrompts,
+  onFocusRef,
 }: {
   sendMessage: (message: string) => void;
   focusMode: string;
@@ -34,10 +35,12 @@ const EmptyChatMessageInput = ({
   onFocusChange?: (focused: boolean) => void;
   onTextareaRef?: (ref: HTMLTextAreaElement | null) => void;
   showQuickPrompts?: boolean;
+  onFocusRef?: (ref: FocusRef | null) => void;
 }) => {
   const [message, setMessage] = useState('');
 
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  const focusRef = useRef<FocusRef | null>(null);
 
   // Generate dynamic placeholder text based on selected agent
   const getPlaceholderText = () => {
@@ -73,6 +76,14 @@ const EmptyChatMessageInput = ({
     inputRef.current = element;
     if (onTextareaRef) {
       onTextareaRef(element);
+    }
+  };
+
+  // Callback ref for Focus component
+  const setFocusRef = (element: FocusRef | null) => {
+    focusRef.current = element;
+    if (onFocusRef) {
+      onFocusRef(element);
     }
   };
 
@@ -142,16 +153,9 @@ const EmptyChatMessageInput = ({
           <div className="flex flex-row items-center space-x-2 lg:space-x-4">
             <div className="flex items-center gap-2">
               <Focus
+                ref={setFocusRef}
                 focusMode={focusMode}
                 setFocusMode={setFocusMode}
-                onTemplateSelect={() => {
-                  // Use requestAnimationFrame to ensure DOM is updated
-                  requestAnimationFrame(() => {
-                    if (inputRef.current) {
-                      inputRef.current.focus();
-                    }
-                  });
-                }}
               />
               <Optimization
                 optimizationMode={optimizationMode}
