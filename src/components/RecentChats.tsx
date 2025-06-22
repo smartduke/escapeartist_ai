@@ -3,6 +3,7 @@ import { useAuth } from '@/components/auth/AuthProvider';
 import { formatTimeDifference } from '@/lib/utils';
 import { Clock, MessageSquare, Sparkles, Plus } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { allTemplates } from './MessageInputActions/Focus';
 
 export interface Chat {
@@ -22,6 +23,7 @@ const RecentChats: React.FC<RecentChatsProps> = ({ focusMode, setFocusMode, onOp
   const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(true);
   const { user, guestId } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
     const fetchChats = async () => {
@@ -67,7 +69,14 @@ const RecentChats: React.FC<RecentChatsProps> = ({ focusMode, setFocusMode, onOp
     fetchChats();
   }, [user, guestId, focusMode]);
 
-
+  const handleTemplateSelect = (templateKey: string) => {
+    // Update local state
+    setFocusMode?.(templateKey);
+    
+    // Update URL to trigger proper state change
+    const templateParam = templateKey !== 'webSearch' ? `?template=${templateKey}` : '';
+    router.push(`/${templateParam}`);
+  };
 
   // Define popular templates to show when All Sources is selected
   const popularTemplates = [
@@ -85,28 +94,21 @@ const RecentChats: React.FC<RecentChatsProps> = ({ focusMode, setFocusMode, onOp
   // Show popular templates when All Sources is selected
   if (focusMode === 'webSearch') {
     return (
-      <div className="w-full max-w-3xl mx-auto mt-12">
-        <div className="flex items-center gap-2 mb-3 px-1">
-          <Sparkles size={16} className="text-black/60 dark:text-white/60" />
-          <h3 className="text-sm font-medium text-black/70 dark:text-white/70">
-            Popular templates
-          </h3>
-        </div>
-        
+      <div className="w-full max-w-3xl mx-auto mt-4">        
         <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
           {popularTemplates.map((template) => template && (
             <button
               key={template.key}
-              onClick={() => setFocusMode?.(template.key)}
-              className="group flex flex-col items-center gap-2 p-3 bg-light-secondary/50 dark:bg-dark-secondary/50 hover:bg-light-secondary dark:hover:bg-dark-secondary border border-light-200/50 dark:border-dark-200/50 hover:border-light-200 dark:hover:border-dark-200 rounded-lg transition-all duration-200 hover:shadow-sm text-center"
+              onClick={() => handleTemplateSelect(template.key)}
+              className="group flex flex-col items-center gap-2 p-3 bg-white/80 dark:bg-gray-900/80 hover:bg-white dark:hover:bg-gray-900/95 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 hover:border-gray-300 dark:hover:border-gray-600 rounded-xl transition-all duration-300 hover:shadow-lg hover:scale-105 text-center"
             >
-              <div className="text-blue-600 dark:text-blue-400 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors">
+              <div className="text-blue-600 dark:text-blue-400 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors p-1.5 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg">
                 {React.cloneElement(template.icon as React.ReactElement, { 
-                  size: 20, 
+                  size: 18, 
                   className: "stroke-[1.5]" 
                 })}
               </div>
-              <p className="text-xs font-medium text-black dark:text-white text-center leading-tight">
+              <p className="text-xs font-semibold text-gray-900 dark:text-white text-center leading-tight">
                 {template.title}
               </p>
             </button>
@@ -115,12 +117,12 @@ const RecentChats: React.FC<RecentChatsProps> = ({ focusMode, setFocusMode, onOp
           {/* More button */}
           <button
             onClick={() => onOpenTemplatePopup?.()}
-            className="group flex flex-col items-center gap-2 p-3 bg-light-secondary/30 dark:bg-dark-secondary/30 hover:bg-light-secondary dark:hover:bg-dark-secondary border border-dashed border-light-200/50 dark:border-dark-200/50 hover:border-light-200 dark:hover:border-dark-200 rounded-lg transition-all duration-200 hover:shadow-sm text-center"
+            className="group flex flex-col items-center gap-2 p-3 bg-white/60 dark:bg-gray-900/60 hover:bg-white dark:hover:bg-gray-900/80 backdrop-blur-sm border border-dashed border-gray-300/60 dark:border-gray-600/60 hover:border-gray-400 dark:hover:border-gray-500 rounded-xl transition-all duration-300 hover:shadow-lg hover:scale-105 text-center"
           >
-            <div className="text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-              <Plus size={20} className="stroke-[1.5]" />
+            <div className="text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors p-1.5 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800/50 dark:to-gray-700/50 rounded-lg">
+              <Plus size={18} className="stroke-[1.5]" />
             </div>
-            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors text-center leading-tight">
+            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors text-center leading-tight">
               More
             </p>
           </button>
@@ -140,9 +142,9 @@ const RecentChats: React.FC<RecentChatsProps> = ({ focusMode, setFocusMode, onOp
 
   return (
     <div className="w-full max-w-3xl mx-auto mt-6">
-      <div className="flex items-center gap-2 mb-3 px-1">
-        <MessageSquare size={16} className="text-black/60 dark:text-white/60" />
-        <h3 className="text-sm font-medium text-black/70 dark:text-white/70">
+      <div className="flex items-center gap-2 mb-4 px-1">
+        <MessageSquare size={16} className="text-gray-600 dark:text-gray-400" />
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
           Recent {templateName} chats
         </h3>
       </div>
@@ -154,10 +156,10 @@ const RecentChats: React.FC<RecentChatsProps> = ({ focusMode, setFocusMode, onOp
             href={`/c/${chat.id}${focusMode !== 'webSearch' ? `?template=${focusMode}` : ''}`}
             className="group block"
           >
-            <div className="flex items-center justify-between p-3 bg-light-secondary/50 dark:bg-dark-secondary/50 hover:bg-light-secondary dark:hover:bg-dark-secondary border border-light-200/50 dark:border-dark-200/50 hover:border-light-200 dark:hover:border-dark-200 rounded-lg transition-all duration-200 hover:shadow-sm">
+            <div className="flex items-center justify-between p-3 bg-white/80 dark:bg-gray-900/80 hover:bg-white dark:hover:bg-gray-900/95 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 hover:border-gray-300 dark:hover:border-gray-600 rounded-xl transition-all duration-300 hover:shadow-lg">
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 {currentTemplate && (
-                  <div className="flex-shrink-0 text-blue-600 dark:text-blue-400">
+                  <div className="flex-shrink-0 text-blue-600 dark:text-blue-400 p-1.5 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg">
                     {React.cloneElement(currentTemplate.icon as React.ReactElement, { 
                       size: 16, 
                       className: "stroke-[1.5]" 
@@ -165,15 +167,15 @@ const RecentChats: React.FC<RecentChatsProps> = ({ focusMode, setFocusMode, onOp
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-black dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                     {chat.title}
                   </p>
                 </div>
               </div>
               
-              <div className="flex items-center gap-1 text-xs text-black/50 dark:text-white/50 flex-shrink-0">
+              <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 flex-shrink-0 bg-gray-50/80 dark:bg-gray-800/80 px-2.5 py-1 rounded-lg">
                 <Clock size={12} />
-                <span>{formatTimeDifference(new Date(), new Date(chat.createdAt))} ago</span>
+                <span className="font-medium">{formatTimeDifference(new Date(), new Date(chat.createdAt))} ago</span>
               </div>
             </div>
           </Link>

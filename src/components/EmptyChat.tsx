@@ -48,35 +48,55 @@ const EmptyChat = ({
   console.log('Textarea focused:', isTextareaFocused);
   console.log('Should show prompts:', !!(currentTemplate && currentTemplate.quickPrompts && isTextareaFocused));
 
-
-
-
-
   return (
-    <div className="relative">
-      <div className="absolute w-full flex flex-row items-center justify-end px-4 lg:px-8 pt-4 lg:pt-6">
+    <div className="relative min-h-screen bg-gradient-to-br from-white via-gray-50/30 to-blue-50/20 dark:from-gray-900 dark:via-gray-900/95 dark:to-blue-900/10">
+      <div className="absolute w-full flex flex-row items-center justify-end px-6 lg:px-8 pt-6 lg:pt-8">
         <Link href="/settings" className="ml-4">
-          <Settings className="cursor-pointer lg:hidden text-black/70 dark:text-white/70 hover:text-black dark:hover:text-white transition-colors" />
+          <Settings className="cursor-pointer lg:hidden text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors duration-200" />
         </Link>
       </div>
-      <div className="flex flex-col items-center min-h-screen max-w-screen-lg mx-auto p-4 lg:p-8 pt-32 lg:pt-40">
+      <div className="flex flex-col items-center min-h-screen max-w-screen-lg mx-auto p-6 lg:p-8 pt-32 lg:pt-40">
         <div className="flex flex-col w-full space-y-6 lg:space-y-8">
-          <div className={`space-y-4 max-w-3xl mx-auto ${currentTemplate && currentTemplate.greeting ? 'text-left' : 'text-center'}`}>
+          {/* Enhanced Greeting Section */}
+          <div className={`space-y-5 max-w-4xl mx-auto ${currentTemplate && currentTemplate.greeting ? 'text-left' : 'text-center'}`}>
             {/* Template Icon - only show for selected templates */}
             {currentTemplate && currentTemplate.icon && currentTemplate.greeting && (
-              <div className="flex items-center justify-start">
-                <div className="text-black/70 dark:text-white/70 text-2xl">
+              <div className="flex items-center justify-start mb-6">
+                <div className="text-gray-700 dark:text-gray-300 text-xl p-3 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/30 dark:to-purple-900/30 rounded-2xl backdrop-blur-sm border border-gray-200/60 dark:border-gray-700/60 shadow-sm">
                   {React.cloneElement(currentTemplate.icon as React.ReactElement, { size: 24 })}
                 </div>
               </div>
             )}
             
-            <h1 className="text-black dark:text-white text-2xl lg:text-3xl font-medium">
-              {currentTemplate && currentTemplate.greeting ? currentTemplate.greeting : 'How can I help you today?'}
-            </h1>
-            <p className="text-black/60 dark:text-white/60 text-lg">
-              {currentTemplate && currentTemplate.subtitle ? currentTemplate.subtitle : 'Ask anything - from quick answers to in-depth research'}
-            </p>
+            {/* Main Greeting */}
+            <div className="space-y-4">
+              <h1 className="text-gray-900 dark:text-white text-2xl lg:text-3xl xl:text-4xl font-medium tracking-tight leading-tight">
+                {currentTemplate && currentTemplate.greeting ? currentTemplate.greeting : (
+                  <>
+                    Search{' '}
+                    <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-blue-700 dark:from-blue-400 dark:via-purple-400 dark:to-blue-500 bg-clip-text text-transparent">
+                      Smarter
+                    </span>
+                  </>
+                )}
+              </h1>
+              <p className="text-gray-600 dark:text-gray-300 text-base lg:text-lg leading-relaxed max-w-3xl mx-auto font-medium">
+                {currentTemplate && currentTemplate.subtitle ? currentTemplate.subtitle : (
+                  <>
+                    Search • Discover • Create
+                  </>
+                )}
+              </p>
+            </div>
+
+            {/* Optional decorative element for non-template mode */}
+            {!currentTemplate?.greeting && (
+              <div className="flex items-center justify-center space-x-2 opacity-60 mt-6">
+                <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></div>
+                <div className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+              </div>
+            )}
           </div>
           
           <div className="w-full max-w-3xl mx-auto relative">
@@ -106,8 +126,8 @@ const EmptyChat = ({
             {currentTemplate && currentTemplate.quickPrompts && isTextareaFocused && (
               <div className="absolute top-full left-0 right-0 z-10 transition-all duration-200"
                    onMouseEnter={() => console.log('Mouse entered quick prompts area')}>
-                <div className="bg-light-secondary dark:bg-dark-secondary border border-light-200 dark:border-dark-200 border-t-0 rounded-b-xl px-5 py-3 shadow-sm">
-                  <div className="space-y-2">
+                <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-gray-200/40 dark:border-gray-700/40 border-t-0 rounded-b-xl px-5 py-3 shadow-lg">
+                  <div className="space-y-1">
                     {currentTemplate.quickPrompts.map((prompt: string, index: number) => (
                       <button
                         key={index}
@@ -131,10 +151,10 @@ const EmptyChat = ({
                           }
                           setIsTextareaFocused(false); // Hide prompts after sending
                         }}
-                        className="group flex items-center w-full p-2 text-left text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white transition-colors duration-200 rounded-lg hover:bg-black/5 dark:hover:bg-white/5"
+                        className="group flex items-center w-full p-2.5 text-left text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all duration-200 rounded-lg hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20"
                       >
-                        <span className="text-sm mr-3">🔍</span>
-                        <span className="text-sm">{prompt}</span>
+                        <span className="text-sm mr-3 opacity-60">🔍</span>
+                        <span className="text-sm font-medium">{prompt}</span>
                       </button>
                     ))}
                   </div>
@@ -144,11 +164,13 @@ const EmptyChat = ({
           </div>
           
           {/* Recent Chats */}
-          <RecentChats 
-            focusMode={focusMode} 
-            setFocusMode={setFocusMode} 
-            onOpenTemplatePopup={() => focusRef.current?.openTemplatePopup()}
-          />
+          <div className="max-w-3xl mx-auto w-full">
+            <RecentChats 
+              focusMode={focusMode} 
+              setFocusMode={setFocusMode} 
+              onOpenTemplatePopup={() => focusRef.current?.openTemplatePopup()}
+            />
+          </div>
         </div>
       </div>
       

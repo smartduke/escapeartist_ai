@@ -91,8 +91,8 @@ const ModelSelector = ({ className }: ModelSelectorProps) => {
 
   if (loading) {
     return (
-      <div className={cn("flex items-center justify-center w-9 h-9 rounded-xl", className)}>
-        <Bot size={16} className="text-gray-600 dark:text-gray-400 animate-pulse" />
+      <div className={cn("flex items-center justify-center w-9 h-9 rounded-xl bg-gray-100/60 dark:bg-gray-800/60 backdrop-blur-sm border border-gray-200/40 dark:border-gray-700/40", className)}>
+        <Bot size={16} className="text-gray-600 dark:text-gray-400 animate-pulse stroke-[1.5]" />
       </div>
     );
   }
@@ -106,7 +106,12 @@ const ModelSelector = ({ className }: ModelSelectorProps) => {
           e.stopPropagation();
           setIsOpen(!isOpen);
         }}
-        className="group relative flex items-center justify-center w-9 h-9 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 active:scale-95 transition-all duration-200"
+        className={cn(
+          "group relative flex items-center justify-center w-9 h-9 rounded-xl backdrop-blur-sm border active:scale-95 transition-all duration-200 shadow-sm hover:shadow-md",
+          isOpen
+            ? "bg-gradient-to-r from-purple-500/10 to-blue-500/10 dark:from-purple-400/10 dark:to-blue-400/10 border-purple-300/60 dark:border-purple-600/60"
+            : "bg-gray-100/60 dark:bg-gray-800/60 border-gray-200/40 dark:border-gray-700/40 hover:bg-white/80 dark:hover:bg-gray-700/80 hover:border-gray-300/60 dark:hover:border-gray-600/60"
+        )}
         title={getModelDisplayName(selectedModel) || 'Select Model'}
       >
         <div className={cn(
@@ -120,7 +125,7 @@ const ModelSelector = ({ className }: ModelSelectorProps) => {
       </button>
 
       {isOpen && (
-        <div className="absolute bottom-full left-0 mb-3 w-80 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-gray-200/60 dark:border-gray-700/60 rounded-2xl shadow-2xl shadow-black/10 dark:shadow-white/5 z-[60] max-h-80 overflow-hidden">
+        <div className="absolute bottom-full left-0 mb-3 w-80 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 rounded-2xl shadow-2xl shadow-black/10 dark:shadow-white/5 z-[60] max-h-80 overflow-hidden">
           {Object.keys(providers).length === 0 ? (
             <div className="p-6 text-center text-gray-500 dark:text-gray-400 font-medium">
               No models available. Please configure API keys in settings.
@@ -129,7 +134,7 @@ const ModelSelector = ({ className }: ModelSelectorProps) => {
             <div className="overflow-y-auto max-h-80">
               {Object.entries(providers).map(([provider, models]) => (
                 <div key={provider} className="border-b border-gray-100/60 dark:border-gray-700/60 last:border-b-0">
-                  <div className="sticky top-0 bg-gradient-to-r from-gray-50/90 to-gray-100/90 dark:from-gray-700/90 dark:to-gray-800/90 backdrop-blur-sm px-4 py-3 text-xs font-bold text-gray-700 dark:text-gray-300 border-b border-gray-200/40 dark:border-gray-600/40">
+                  <div className="sticky top-0 bg-gradient-to-r from-gray-50/95 to-gray-100/95 dark:from-gray-800/95 dark:to-gray-900/95 backdrop-blur-sm px-4 py-3 text-xs font-bold text-gray-700 dark:text-gray-300 border-b border-gray-200/40 dark:border-gray-600/40">
                     {getProviderDisplayName(provider)} <span className="text-gray-500 dark:text-gray-400 font-medium">({Object.keys(models).length})</span>
                   </div>
                   <div className="p-3 space-y-1">
@@ -143,10 +148,10 @@ const ModelSelector = ({ className }: ModelSelectorProps) => {
                           handleModelSelect(provider, modelKey);
                         }}
                         className={cn(
-                          "w-full text-left px-4 py-3 text-sm rounded-xl transition-all duration-200 group",
+                          "w-full text-left px-4 py-3 text-sm rounded-xl transition-all duration-200 group border",
                           selectedProvider === provider && selectedModel === modelKey
-                            ? "bg-gradient-to-r from-purple-50 to-violet-50 dark:from-purple-950/30 dark:to-violet-950/30 border border-purple-200/60 dark:border-purple-700/60 text-purple-700 dark:text-purple-300 shadow-sm"
-                            : "text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 dark:hover:from-gray-700/50 dark:hover:to-gray-800/50 hover:text-gray-900 dark:hover:text-gray-100"
+                            ? "bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/40 dark:to-purple-950/40 border-blue-200/60 dark:border-blue-700/60 text-blue-700 dark:text-blue-300 shadow-md"
+                            : "border-transparent text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 dark:hover:from-gray-700/50 dark:hover:to-gray-800/50 hover:text-gray-900 dark:hover:text-gray-100 hover:border-gray-200/40 dark:hover:border-gray-600/40"
                         )}
                       >
                         <div className="font-semibold truncate">{model.displayName}</div>

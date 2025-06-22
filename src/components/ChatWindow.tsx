@@ -312,6 +312,14 @@ const ChatWindow = ({ id }: { id?: string }) => {
   const [focusMode, setFocusMode] = useState(templateParam || 'webSearch');
   const [optimizationMode, setOptimizationMode] = useState('speed');
 
+  // Update focusMode when URL template parameter changes
+  useEffect(() => {
+    const newFocusMode = templateParam || 'webSearch';
+    if (newFocusMode !== focusMode) {
+      setFocusMode(newFocusMode);
+    }
+  }, [templateParam, focusMode]);
+
   const [isMessagesLoaded, setIsMessagesLoaded] = useState(false);
 
   const [notFound, setNotFound] = useState(false);
@@ -680,13 +688,13 @@ const ChatWindow = ({ id }: { id?: string }) => {
         ) : (
           <>
             {/* Weather Widget - Desktop */}
-            <div className="hidden lg:block absolute top-6 right-8 z-50">
+            <div className="hidden lg:block absolute top-8 right-8 z-50 max-w-sm">
               <WeatherWidget />
             </div>
             
             {/* Mobile Weather Widget */}
-            <div className="fixed top-0 left-0 right-0 lg:hidden bg-light-primary/80 dark:bg-dark-primary/80 backdrop-blur-lg z-50">
-              <div className="max-w-screen-lg mx-auto px-4 py-2">
+            <div className="fixed top-0 left-0 right-0 lg:hidden bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl z-50 border-b border-gray-200/30 dark:border-gray-700/30">
+              <div className="max-w-screen-lg mx-auto px-4 py-3">
                 <WeatherWidget />
               </div>
             </div>
@@ -715,23 +723,31 @@ const ChatWindow = ({ id }: { id?: string }) => {
       </div>
     )
   ) : (
-    <div className="flex flex-row items-center justify-center min-h-screen">
-      <svg
-        aria-hidden="true"
-        className="w-8 h-8 text-light-200 fill-light-secondary dark:text-[#202020] animate-spin dark:fill-[#ffffff3b]"
-        viewBox="0 0 100 101"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          d="M100 50.5908C100.003 78.2051 78.1951 100.003 50.5908 100C22.9765 99.9972 0.997224 78.018 1 50.4037C1.00281 22.7993 22.8108 0.997224 50.4251 1C78.0395 1.00281 100.018 22.8108 100 50.4251ZM9.08164 50.594C9.06312 73.3997 27.7909 92.1272 50.5966 92.1457C73.4023 92.1642 92.1298 73.4365 92.1483 50.6308C92.1669 27.8251 73.4392 9.0973 50.6335 9.07878C27.8278 9.06026 9.10003 27.787 9.08164 50.594Z"
-          fill="currentColor"
-        />
-        <path
-          d="M93.9676 39.0409C96.393 38.4037 97.8624 35.9116 96.9801 33.5533C95.1945 28.8227 92.871 24.3692 90.0681 20.348C85.6237 14.1775 79.4473 9.36872 72.0454 6.45794C64.6435 3.54717 56.3134 2.65431 48.3133 3.89319C45.869 4.27179 44.3768 6.77534 45.014 9.20079C45.6512 11.6262 48.1343 13.0956 50.5786 12.717C56.5073 11.8281 62.5542 12.5399 68.0406 14.7911C73.527 17.0422 78.2187 20.7487 81.5841 25.4923C83.7976 28.5886 85.4467 32.059 86.4416 35.7474C87.1273 38.1189 89.5423 39.6781 91.9676 39.0409Z"
-          fill="currentFill"
-        />
-      </svg>
+    <div className="flex flex-row items-center justify-center min-h-screen bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800">
+      <div className="flex flex-col items-center space-y-4">
+        <div className="relative">
+          <svg
+            aria-hidden="true"
+            className="w-12 h-12 text-gray-200 animate-spin dark:text-gray-600 fill-blue-500"
+            viewBox="0 0 100 101"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M100 50.5908C100.003 78.2051 78.1951 100.003 50.5908 100C22.9765 99.9972 0.997224 78.018 1 50.4037C1.00281 22.7993 22.8108 0.997224 50.4251 1C78.0395 1.00281 100.018 22.8108 100 50.4251ZM9.08164 50.594C9.06312 73.3997 27.7909 92.1272 50.5966 92.1457C73.4023 92.1642 92.1298 73.4365 92.1483 50.6308C92.1669 27.8251 73.4392 9.0973 50.6335 9.07878C27.8278 9.06026 9.10003 27.787 9.08164 50.594Z"
+              fill="currentColor"
+            />
+            <path
+              d="M93.9676 39.0409C96.393 38.4037 97.8624 35.9116 96.9801 33.5533C95.1945 28.8227 92.871 24.3692 90.0681 20.348C85.6237 14.1775 79.4473 9.36872 72.0454 6.45794C64.6435 3.54717 56.3134 2.65431 48.3133 3.89319C45.869 4.27179 44.3768 6.77534 45.014 9.20079C45.6512 11.6262 48.1343 13.0956 50.5786 12.717C56.5073 11.8281 62.5542 12.5399 68.0406 14.7911C73.527 17.0422 78.2187 20.7487 81.5841 25.4923C83.7976 28.5886 85.4467 32.059 86.4416 35.7474C87.1273 38.1189 89.5423 39.6781 91.9676 39.0409Z"
+              fill="currentFill"
+            />
+          </svg>
+          <div className="absolute inset-0 w-12 h-12 border-4 border-transparent border-t-blue-500 rounded-full animate-spin opacity-20"></div>
+        </div>
+        <p className="text-gray-600 dark:text-gray-400 text-sm font-medium animate-pulse">
+          Initializing Infoxai...
+        </p>
+      </div>
     </div>
   );
 };

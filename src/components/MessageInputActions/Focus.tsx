@@ -39,6 +39,7 @@ import {
   Transition,
 } from '@headlessui/react';
 import React, { Fragment, useState } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 
 const templateCategories = [
   {
@@ -467,6 +468,8 @@ const Focus = React.forwardRef<FocusRef, {
   focusMode,
   setFocusMode,
 }, ref) => {
+  const router = useRouter();
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -484,10 +487,24 @@ const Focus = React.forwardRef<FocusRef, {
   })).filter(category => category.templates.length > 0);
   
   const handleTemplateSelect = (templateKey: string) => {
-    setFocusMode(templateKey);
     setIsOpen(false);
     setSearchQuery('');
     setSelectedCategory('all');
+    
+    // Always navigate with the template parameter to ensure state consistency
+    const templateParam = templateKey !== 'webSearch' ? `?template=${templateKey}` : '';
+    
+    if (pathname !== '/') {
+      // If not on home page, navigate to home page with the selected template
+      router.push(`/${templateParam}`);
+    } else {
+      // If already on home page, update URL with template parameter or navigate to clean URL
+      if (templateParam) {
+        router.push(`/${templateParam}`);
+      } else {
+        router.push('/');
+      }
+    }
   };
 
   // Expose the openTemplatePopup function via ref
@@ -499,9 +516,9 @@ const Focus = React.forwardRef<FocusRef, {
     <>
       {currentTemplate ? (
         <button
-        type="button"
+          type="button"
           onClick={() => setIsOpen(true)}
-          className="group flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 active:scale-95 transition-all duration-200"
+          className="group flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-100/60 dark:bg-gray-800/60 backdrop-blur-sm border border-gray-200/40 dark:border-gray-700/40 hover:bg-white/80 dark:hover:bg-gray-700/80 hover:border-gray-300/60 dark:hover:border-gray-600/60 active:scale-95 transition-all duration-200 shadow-sm hover:shadow-md"
           title={currentTemplate.title}
         >
           <div className="text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-100 transition-colors">
@@ -513,12 +530,13 @@ const Focus = React.forwardRef<FocusRef, {
           <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-100 transition-colors">
             {currentTemplate.title}
           </span>
+          <ChevronDown size={14} className="text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors stroke-[1.5]" />
         </button>
       ) : (
         <button
           type="button"
           onClick={() => setIsOpen(true)}
-          className="group relative flex items-center justify-center w-9 h-9 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 active:scale-95 transition-all duration-200"
+          className="group relative flex items-center justify-center w-9 h-9 rounded-xl bg-gray-100/60 dark:bg-gray-800/60 backdrop-blur-sm border border-gray-200/40 dark:border-gray-700/40 hover:bg-white/80 dark:hover:bg-gray-700/80 hover:border-gray-300/60 dark:hover:border-gray-600/60 active:scale-95 transition-all duration-200 shadow-sm hover:shadow-md"
           title="Choose Template"
         >
           <div className="text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-100 transition-colors">
@@ -538,71 +556,71 @@ const Focus = React.forwardRef<FocusRef, {
             leaveFrom="opacity-100"
             leaveTo="opacity-0"
           >
-            <div className="fixed inset-0 bg-black/20 dark:bg-black/40 backdrop-blur-sm" />
+            <div className="fixed inset-0 bg-white/95 dark:bg-gray-950/95 backdrop-blur-xl" />
           </Transition.Child>
 
           <div className="fixed inset-0 overflow-y-auto">
-            <div className="flex min-h-full items-center justify-center p-4">
+            <div className="min-h-full">
               <Transition.Child
-        as={Fragment}
+                as={Fragment}
                 enter="ease-out duration-300"
-                enterFrom="opacity-0 scale-95"
-                enterTo="opacity-100 scale-100"
+                enterFrom="opacity-0 translate-y-4"
+                enterTo="opacity-100 translate-y-0"
                 leave="ease-in duration-200"
-                leaveFrom="opacity-100 scale-100"
-                leaveTo="opacity-0 scale-95"
+                leaveFrom="opacity-100 translate-y-0"
+                leaveTo="opacity-0 translate-y-4"
               >
-                <DialogPanel className="w-full max-w-5xl transform overflow-hidden rounded-2xl bg-light-primary dark:bg-dark-primary border border-black/5 dark:border-white/5 shadow-2xl transition-all">
+                <DialogPanel className="w-full h-full min-h-screen bg-gradient-to-br from-gray-50/50 via-white to-blue-50/30 dark:from-gray-900/50 dark:via-gray-950 dark:to-blue-950/30">
                   {/* Header */}
-                  <div className="relative border-b border-black/5 dark:border-white/5 bg-gradient-to-r from-blue-50/50 to-purple-50/50 dark:from-blue-950/20 dark:to-purple-950/20">
-                    <div className="flex items-center justify-between p-6 pb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-                          <Sparkles size={20} />
+                  <div className="sticky top-0 z-10 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl border-b border-gray-200/40 dark:border-gray-700/40">
+                    <div className="max-w-7xl mx-auto px-6 lg:px-8">
+                      <div className="flex items-center justify-between h-16">
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 text-white shadow-sm">
+                            <Sparkles size={16} />
+                          </div>
+                          <div>
+                            <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
+                              Templates
+                            </h1>
+                          </div>
                         </div>
-                        <div>
-                          <h2 className="text-xl font-semibold text-black dark:text-white">
-                            Choose Your Template
-                          </h2>
-                          <p className="text-sm text-black/60 dark:text-white/60">
-                            Select a specialized template for your task
-                          </p>
-                        </div>
+                        <button
+                          onClick={() => setIsOpen(false)}
+                          className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                        >
+                          <X size={16} />
+                        </button>
                       </div>
-                      <button
-                        onClick={() => setIsOpen(false)}
-                        className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-black/50 dark:text-white/50 hover:text-black dark:hover:text-white"
-                      >
-                        <X size={18} />
-                      </button>
                     </div>
-                    
-                    {/* Search Bar and Category Filter */}
-                    <div className="px-6 pb-4 space-y-4">
-                      <div className="relative">
-                        <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" size={18} />
-                        <input
-                          type="text"
-                          placeholder="Search templates..."
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                          className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200/60 dark:border-gray-700/60 bg-white/70 dark:bg-gray-800/50 backdrop-blur-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 transition-all duration-200 shadow-sm hover:shadow-md font-medium"
-                        />
+                  </div>
+
+                  {/* Content */}
+                  <div className="max-w-7xl mx-auto px-6 lg:px-8 py-8">
+                    {/* Search and Filters */}
+                    <div className="mb-8 space-y-6">
+                      <div className="max-w-2xl">
+                        <div className="relative">
+                          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" size={18} />
+                          <input
+                            type="text"
+                            placeholder="Search templates..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200/60 dark:border-gray-700/60 bg-white/70 dark:bg-gray-900/50 backdrop-blur-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all duration-200 shadow-sm hover:shadow-md font-medium"
+                          />
+                        </div>
                       </div>
                       
                       {/* Category Filter */}
                       <div className="flex items-center gap-3 flex-wrap">
-                        <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                          <Filter size={16} className="stroke-[1.5]" />
-                          <span className="text-sm font-semibold">Categories</span>
-                        </div>
                         <button
                           onClick={() => setSelectedCategory('all')}
                           className={cn(
-                            'px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 backdrop-blur-sm',
+                            'px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200',
                             selectedCategory === 'all'
-                              ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/25'
-                              : 'bg-white/60 dark:bg-gray-800/40 border border-gray-200/40 dark:border-gray-700/40 text-gray-700 dark:text-gray-300 hover:bg-white/80 dark:hover:bg-gray-800/60 hover:border-gray-300/60 dark:hover:border-gray-600/60 hover:shadow-md'
+                              ? 'bg-blue-500 text-white shadow-md'
+                              : 'bg-white/60 dark:bg-gray-800/60 text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-800 border border-gray-200/60 dark:border-gray-700/60'
                           )}
                         >
                           All
@@ -612,90 +630,139 @@ const Focus = React.forwardRef<FocusRef, {
                             key={category.name}
                             onClick={() => setSelectedCategory(category.name)}
                             className={cn(
-                              'px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center gap-2 backdrop-blur-sm',
+                              'px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2',
                               selectedCategory === category.name
-                                ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/25'
-                                : 'bg-white/60 dark:bg-gray-800/40 border border-gray-200/40 dark:border-gray-700/40 text-gray-700 dark:text-gray-300 hover:bg-white/80 dark:hover:bg-gray-800/60 hover:border-gray-300/60 dark:hover:border-gray-600/60 hover:shadow-md'
+                                ? 'bg-blue-500 text-white shadow-md'
+                                : 'bg-white/60 dark:bg-gray-800/60 text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-800 border border-gray-200/60 dark:border-gray-700/60'
                             )}
                           >
-                            <span className="text-base">{category.icon}</span>
+                            <span className="text-sm">{category.icon}</span>
                             <span>{category.name}</span>
                           </button>
                         ))}
                       </div>
                     </div>
-                  </div>
 
-                  {/* Content */}
-                  <div className="p-6 max-h-[70vh] overflow-y-auto">
-                    <div className="space-y-8">
-                      {filteredCategories.map((category, categoryIndex) => (
-                        <div key={categoryIndex}>
-                          <div className="flex items-center gap-2 mb-4">
-                            <span className="text-2xl">{category.icon}</span>
-                            <h3 className="text-lg font-semibold text-black dark:text-white">
-                              {category.name}
-                            </h3>
-                            <div className="flex-1 h-px bg-gradient-to-r from-black/10 to-transparent dark:from-white/10"></div>
-                          </div>
-                          
-                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                            {category.templates.map((template) => (
-                              <button
-                                onClick={() => handleTemplateSelect(template.key)}
-                                key={template.key}
-                className={cn(
-                                  'group relative flex flex-col items-center gap-4 p-5 rounded-2xl transition-all duration-300 text-center border backdrop-blur-sm',
+                    {/* Templates Grid */}
+                    <div className="space-y-10">
+                      {selectedCategory === 'all' ? (
+                        // Show all templates without category headers when "All" is selected
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                          {filteredCategories.flatMap(category => category.templates).map((template) => (
+                            <button
+                              onClick={() => handleTemplateSelect(template.key)}
+                              key={template.key}
+                              className={cn(
+                                'group relative flex flex-col items-center gap-3 p-4 rounded-xl transition-all duration-300 text-center backdrop-blur-sm',
+                                focusMode === template.key
+                                  ? 'bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200/60 dark:border-blue-700/60 text-blue-700 dark:text-blue-300 shadow-lg scale-105'
+                                  : 'bg-white/60 dark:bg-gray-800/40 border border-gray-200/40 dark:border-gray-700/40 hover:bg-white dark:hover:bg-gray-800/60 hover:border-gray-300/60 dark:hover:border-gray-600/60 hover:shadow-lg hover:scale-105 text-gray-700 dark:text-gray-300',
+                              )}
+                            >
+                              <div className={cn(
+                                'flex items-center justify-center w-12 h-12 rounded-xl transition-all duration-300',
+                                focusMode === template.key
+                                  ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md'
+                                  : 'bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 text-gray-600 dark:text-gray-400 group-hover:from-gray-200 group-hover:to-gray-300 dark:group-hover:from-gray-600 dark:group-hover:to-gray-700',
+                              )}>
+                                {React.cloneElement(template.icon as React.ReactElement, { 
+                                  size: 16, 
+                                  className: "stroke-[1.5]" 
+                                })}
+                              </div>
+                              <div className="space-y-1">
+                                <p className="font-medium text-sm leading-tight">
+                                  {template.title}
+                                </p>
+                                <p className={cn(
+                                  "text-xs leading-relaxed line-clamp-2",
                                   focusMode === template.key
-                                    ? 'bg-gradient-to-br from-blue-50/80 to-indigo-50/80 dark:from-blue-950/30 dark:to-indigo-950/30 border-blue-200/60 dark:border-blue-700/60 text-blue-700 dark:text-blue-300 shadow-xl shadow-blue-500/10 scale-105'
-                                    : 'bg-white/60 dark:bg-gray-800/40 border-gray-200/40 dark:border-gray-700/40 hover:bg-white/80 dark:hover:bg-gray-800/60 hover:border-gray-300/60 dark:hover:border-gray-600/60 hover:shadow-xl hover:shadow-black/5 dark:hover:shadow-white/5 hover:scale-105 text-gray-700 dark:text-gray-300',
-                )}
-              >
-                <div className={cn(
-                                  'flex items-center justify-center w-14 h-14 rounded-2xl transition-all duration-300 shadow-sm',
-                                  focusMode === template.key
-                                    ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/25'
-                                    : 'bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 text-gray-600 dark:text-gray-400 group-hover:from-gray-200 group-hover:to-gray-300 dark:group-hover:from-gray-600 dark:group-hover:to-gray-700 group-hover:text-gray-700 dark:group-hover:text-gray-300',
+                                    ? 'text-blue-600/70 dark:text-blue-400/70'
+                                    : 'text-gray-500 dark:text-gray-400'
                                 )}>
-                                  {React.cloneElement(template.icon as React.ReactElement, { 
-                                    size: 18, 
-                                    className: "stroke-[1.5]" 
-                                  })}
-                </div>
-                                <div className="space-y-1.5">
-                                  <p className="font-semibold text-sm leading-tight">
-                                    {template.title}
-                                  </p>
-                  <p className={cn(
-                                    "text-xs leading-relaxed line-clamp-2 font-medium",
-                                    focusMode === template.key
-                                      ? 'text-blue-600/70 dark:text-blue-400/70'
-                                      : 'text-gray-500 dark:text-gray-400'
-                                  )}>
-                                    {template.description}
-                  </p>
-                </div>
-                                {focusMode === template.key && (
-                                  <div className="absolute top-3 right-3">
-                                    <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/25">
-                                      <Check size={14} className="stroke-[2]" />
-                                    </div>
+                                  {template.description}
+                                </p>
+                              </div>
+                              {focusMode === template.key && (
+                                <div className="absolute top-3 right-3">
+                                  <div className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-500 text-white shadow-md">
+                                    <Check size={12} className="stroke-[2]" />
                                   </div>
-                                )}
-                              </button>
-                            ))}
-                          </div>
+                                </div>
+                              )}
+                            </button>
+                          ))}
                         </div>
-                      ))}
+                      ) : (
+                        // Show templates grouped by categories when a specific category is selected
+                        filteredCategories.map((category, categoryIndex) => (
+                          <div key={categoryIndex}>
+                            <div className="flex items-center gap-3 mb-6">
+                              <span className="text-xl">{category.icon}</span>
+                              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                                {category.name}
+                              </h2>
+                              <div className="flex-1 h-px bg-gradient-to-r from-gray-200 to-transparent dark:from-gray-700"></div>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                              {category.templates.map((template) => (
+                                <button
+                                  onClick={() => handleTemplateSelect(template.key)}
+                                  key={template.key}
+                                  className={cn(
+                                    'group relative flex flex-col items-center gap-3 p-4 rounded-xl transition-all duration-300 text-center backdrop-blur-sm',
+                                    focusMode === template.key
+                                      ? 'bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200/60 dark:border-blue-700/60 text-blue-700 dark:text-blue-300 shadow-lg scale-105'
+                                      : 'bg-white/60 dark:bg-gray-800/40 border border-gray-200/40 dark:border-gray-700/40 hover:bg-white dark:hover:bg-gray-800/60 hover:border-gray-300/60 dark:hover:border-gray-600/60 hover:shadow-lg hover:scale-105 text-gray-700 dark:text-gray-300',
+                                  )}
+                                >
+                                  <div className={cn(
+                                    'flex items-center justify-center w-12 h-12 rounded-xl transition-all duration-300',
+                                    focusMode === template.key
+                                      ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md'
+                                      : 'bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 text-gray-600 dark:text-gray-400 group-hover:from-gray-200 group-hover:to-gray-300 dark:group-hover:from-gray-600 dark:group-hover:to-gray-700',
+                                  )}>
+                                    {React.cloneElement(template.icon as React.ReactElement, { 
+                                      size: 16, 
+                                      className: "stroke-[1.5]" 
+                                    })}
+                                  </div>
+                                  <div className="space-y-1">
+                                    <p className="font-medium text-sm leading-tight">
+                                      {template.title}
+                                    </p>
+                                    <p className={cn(
+                                      "text-xs leading-relaxed line-clamp-2",
+                                      focusMode === template.key
+                                        ? 'text-blue-600/70 dark:text-blue-400/70'
+                                        : 'text-gray-500 dark:text-gray-400'
+                                    )}>
+                                      {template.description}
+                                    </p>
+                                  </div>
+                                  {focusMode === template.key && (
+                                    <div className="absolute top-3 right-3">
+                                      <div className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-500 text-white shadow-md">
+                                        <Check size={12} className="stroke-[2]" />
+                                      </div>
+                                    </div>
+                                  )}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ))
+                      )}
                     </div>
                     
                     {filteredCategories.length === 0 && (
-                      <div className="text-center py-12">
-                        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center">
-                          <Search className="text-black/40 dark:text-white/40" size={16} />
+                      <div className="text-center py-16">
+                        <div className="w-16 h-16 mx-auto mb-4 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                          <Search className="text-gray-400 dark:text-gray-500" size={20} />
                         </div>
-                        <p className="text-black/60 dark:text-white/60 text-sm">
-                          No templates found matching &quot;{searchQuery}&quot;
+                        <p className="text-gray-600 dark:text-gray-400 text-sm">
+                          No templates found matching "{searchQuery}"
                           {selectedCategory !== 'all' && ` in ${selectedCategory}`}
                         </p>
                       </div>

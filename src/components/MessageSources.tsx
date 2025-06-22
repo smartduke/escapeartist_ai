@@ -14,7 +14,7 @@ const MessageSources = ({ sources, onViewSources, messageIndex }: MessageSources
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-1.5">
       {sources.slice(0, 3).map((source, i) => (
         <a
-          className="group bg-white dark:bg-dark-secondary hover:bg-light-50 dark:hover:bg-dark-100 border border-light-200 dark:border-dark-200 transition-all duration-200 rounded-lg p-2 flex flex-col space-y-1"
+          className="group bg-gradient-to-r from-blue-50/60 to-purple-50/60 dark:from-blue-900/15 dark:to-purple-900/15 hover:from-blue-50/80 hover:to-purple-50/80 dark:hover:from-blue-900/25 dark:hover:to-purple-900/25 transition-all duration-200 rounded-lg p-2 flex flex-col justify-center space-y-1"
           key={i}
           href={source.metadata.url}
           target="_blank"
@@ -55,7 +55,7 @@ const MessageSources = ({ sources, onViewSources, messageIndex }: MessageSources
       {/* View all sources card */}
       <button
         onClick={() => onViewSources?.(sources, messageIndex)}
-        className="group bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-900/30 dark:hover:to-indigo-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-2 flex flex-col justify-center items-center transition-all duration-200"
+        className="group bg-gradient-to-r from-blue-50/60 to-indigo-50/60 dark:from-blue-950/30 dark:to-indigo-950/30 hover:from-blue-50/80 hover:to-indigo-50/80 dark:hover:from-blue-950/45 dark:hover:to-indigo-950/45 rounded-lg p-2 flex flex-col justify-center items-center transition-all duration-200"
       >
         <div className="p-1 bg-blue-100 dark:bg-blue-800 rounded-lg mb-1">
           <ChevronRight size={12} className="text-blue-600 dark:text-blue-300 group-hover:translate-x-0.5 transition-transform duration-200" />
