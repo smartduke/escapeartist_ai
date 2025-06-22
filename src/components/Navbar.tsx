@@ -1081,6 +1081,7 @@ const Navbar = ({
           </span>
         </button>
       </div>
+      
       <div className="hidden lg:flex flex-row items-center justify-center space-x-4">
         {/* Template Name */}
         <button
@@ -1147,7 +1148,6 @@ const Navbar = ({
                 <button
                   className="flex items-center gap-2 px-4 py-2 text-left hover:bg-light-secondary dark:hover:bg-dark-secondary transition-colors text-black dark:text-white rounded-lg font-medium"
                   onClick={() => exportAsWord(messages, title || '')}
-                  data-word-export
                 >
                   <File size={17} className="text-[#24A0ED]" />
                   Export as Word

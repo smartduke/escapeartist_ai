@@ -860,7 +860,8 @@ const MessageBox = ({
             'break-words',
           )}
         >
-          <h2 className="text-black dark:text-white font-medium text-3xl lg:w-9/12">
+          {/* Clean User Message */}
+          <h2 className="text-black dark:text-white font-medium text-2xl lg:text-3xl leading-relaxed lg:w-9/12">
             {message.content}
           </h2>
         </div>
@@ -872,7 +873,7 @@ const MessageBox = ({
             ref={dividerRef}
             className="w-full"
           >
-            {/* Tab Navigation */}
+            {/* Refined Tab Navigation */}
             <div 
               ref={tabNavRef}
               className={cn(
@@ -949,6 +950,7 @@ const MessageBox = ({
                     />
                   </div>
                 )}
+                
                 <div className="flex flex-col space-y-2">
                   {isEditing && onMessageUpdate ? (
                     <RichTextEditor
@@ -971,6 +973,7 @@ const MessageBox = ({
                       {parsedMessage}
                     </Markdown>
                   )}
+                  
                   {loading && isLast ? null : (
                     <div className="flex flex-row items-center justify-between w-full text-black dark:text-white py-4 -mx-2">
                       <div className="flex flex-row items-center space-x-1">
@@ -1048,6 +1051,7 @@ const MessageBox = ({
                       </div>
                     </div>
                   )}
+                  
                   {isLast &&
                     message.suggestions &&
                     message.suggestions.length > 0 &&
@@ -1116,8 +1120,6 @@ const MessageBox = ({
         </div>
       )}
 
-
-      
       {/* Sources Sidebar */}
       <SourcesSidebar
         sources={sidebarSources}

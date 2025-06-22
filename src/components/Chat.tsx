@@ -102,7 +102,13 @@ const Chat = ({
               onEditEnd={handleEditEnd}
             />
             {!isLast && msg.role === 'assistant' && (
-              <div className="h-px w-full bg-light-secondary dark:bg-dark-secondary" />
+              <div className="flex items-center justify-center my-6">
+                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-light-secondary dark:via-dark-secondary to-transparent" />
+                <div className="px-3">
+                  <div className="w-1.5 h-1.5 rounded-full bg-light-secondary dark:bg-dark-secondary"></div>
+                </div>
+                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-light-secondary dark:via-dark-secondary to-transparent" />
+              </div>
             )}
           </Fragment>
         );

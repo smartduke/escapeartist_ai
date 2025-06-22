@@ -65,7 +65,7 @@ const DeleteChat = ({
         }}
         className="p-1 hover:bg-black/20 dark:hover:bg-white/20 rounded transition-all duration-300 ease-in-out"
       >
-        <Trash size={12} className="text-red-400" />
+        <Trash size={14} className="text-red-400" />
       </button>
       <Transition appear show={confirmationDialogOpen} as={Fragment}>
         <Dialog
