@@ -445,6 +445,9 @@ const exportMessageAsBlogPost = async (message: Message, userMessage?: Message, 
           userQuestion: userMessage?.content,
           chatModel: currentChatModel,
           sources: message.sources || [],
+          chatId: message.chatId,
+          messageId: message.messageId,
+          // TODO: Add userId/guestId from auth context when available
         }),
     });
 

@@ -6,6 +6,7 @@ import Navbar from './Navbar';
 import Chat from './Chat';
 import EmptyChat from './EmptyChat';
 import WeatherWidget from './WeatherWidget';
+import BlogExportsPanel from './BlogExportsPanel';
 import crypto from 'crypto';
 import { toast } from 'sonner';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -272,6 +273,9 @@ const ChatWindow = ({ id }: { id?: string }) => {
   // Auth modal state
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  
+  // Blog exports panel state
+  const [showBlogExports, setShowBlogExports] = useState(false);
 
   const [chatModelProvider, setChatModelProvider] = useState<ChatModelProvider>(
     {

@@ -3,6 +3,8 @@ import {
   getAvailableChatModelProviders,
 } from '@/lib/providers';
 import { AIMessage, HumanMessage } from '@langchain/core/messages';
+import db from '@/lib/db';
+import { blogExports } from '@/lib/db/schema';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -20,6 +22,10 @@ type BlogExportRequest = {
       url: string;
     };
   }>;
+  chatId?: string;
+  messageId?: string;
+  userId?: string;
+  guestId?: string;
 };
 
 const SEO_BLOG_PROMPT = `You are an expert SEO content writer and Yoast SEO specialist. Your task is to EXPAND and ENHANCE the given content into a comprehensive, 100% Yoast SEO-compliant blog post that is LONGER and MORE DETAILED than the original.
@@ -181,6 +187,193 @@ OUTPUT FORMAT (JSON):
 CONTENT TO OPTIMIZE:
 {USER_QUESTION}Content: `;
 
+// Function to convert markdown to HTML (simplified version)
+const convertMarkdownToHtml = (markdown: string): string => {
+  if (!markdown) return '';
+  
+  let html = markdown;
+  
+  // Headers
+  html = html.replace(/^### (.*$)/gm, '<h3>$1</h3>');
+  html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+  html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
+  
+  // Bold and italic
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  
+  // Lists
+  html = html.replace(/^\* (.*$)/gm, '<li>$1</li>');
+  html = html.replace(/(<li>.*<\/li>)/g, '<ul>$1</ul>');
+  
+  // Paragraphs
+  html = html.split('\n\n').map(para => para.trim() ? `<p>${para}</p>` : '').join('\n');
+  
+  return html;
+};
+
+// Function to generate complete HTML for blog export
+const generateBlogHTML = (blogData: any, title: string): string => {
+  const keywords = [
+    blogData.keywords?.focus || '', 
+    ...(blogData.keywords?.related || []), 
+    ...(blogData.keywords?.longTail || []), 
+    ...(blogData.keywords?.lsi || [])
+  ].filter(k => k).join(', ');
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${blogData.title}</title>
+  <meta name="description" content="${blogData.metaDescription}">
+  <meta name="keywords" content="${keywords}">
+  
+  <!-- Open Graph Meta Tags -->
+  <meta property="og:title" content="${blogData.title}">
+  <meta property="og:description" content="${blogData.metaDescription}">
+  <meta property="og:type" content="article">
+  
+  <!-- Twitter Card Meta Tags -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="${blogData.title}">
+  <meta name="twitter:description" content="${blogData.metaDescription}">
+  
+  <!-- Schema.org JSON-LD -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "${blogData.title}",
+    "description": "${blogData.metaDescription}",
+    "author": {
+      "@type": "Organization",
+      "name": "Perplexica AI"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "Perplexica AI"
+    },
+    "datePublished": "${new Date().toISOString()}",
+    "dateModified": "${new Date().toISOString()}"
+  }
+  </script>
+  
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      color: #333;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      color: #2c3e50;
+      margin-top: 2em;
+      margin-bottom: 0.5em;
+    }
+    h1 { font-size: 2.5em; border-bottom: 3px solid #3498db; padding-bottom: 10px; }
+    h2 { font-size: 2em; color: #34495e; }
+    h3 { font-size: 1.5em; }
+    
+    .references-section {
+      background: #f0f9ff;
+      padding: 30px;
+      border-radius: 12px;
+      margin: 40px 0;
+      border-left: 4px solid #0ea5e9;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .references-list {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      margin-top: 20px;
+    }
+    .reference-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 15px;
+      padding: 15px;
+      background: white;
+      border-radius: 8px;
+      border: 1px solid #e0f2fe;
+    }
+    .reference-number {
+      background: #0ea5e9;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-weight: bold;
+      font-size: 0.85em;
+      flex-shrink: 0;
+    }
+    .reference-title {
+      color: #0c4a6e;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.95em;
+      line-height: 1.4;
+      display: block;
+      margin-bottom: 4px;
+    }
+    .reference-title:hover {
+      color: #0ea5e9;
+      text-decoration: underline;
+    }
+    .reference-domain {
+      font-size: 0.8em;
+      color: #64748b;
+      font-style: italic;
+    }
+    
+    .generated-by {
+      text-align: center;
+      margin-top: 50px;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      color: #6c757d;
+    }
+  </style>
+</head>
+<body>
+  <article>
+    <h1>${blogData.title}</h1>
+    
+    <div class="content">
+      ${blogData.content && blogData.content.includes('<') ? blogData.content : convertMarkdownToHtml(blogData.content)}
+    </div>
+
+    ${blogData.references && blogData.references.length > 0 ? `
+    <div class="references-section">
+      <h2>📚 References</h2>
+      <div class="references-list">
+        ${blogData.references.map((ref: any) => `
+          <div class="reference-item">
+            <span class="reference-number">[${ref.id}]</span>
+            <div class="reference-details">
+              <a href="${ref.url}" target="_blank" rel="noopener noreferrer" class="reference-title">${ref.title}</a>
+              <div class="reference-domain">${ref.domain}</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+    ` : ''}
+  </article>
+
+  <div class="generated-by">
+    <p>Generated by <strong>Perplexica AI</strong> - Advanced AI Search Engine</p>
+    <p>Model Used: <strong>${blogData.modelUsed || 'Unknown'}</strong></p>
+    <p>Exported on: ${new Date().toLocaleString()}</p>
+  </div>
+</body>
+</html>`;
+};
+
 // Function to extract citations and create references
 const extractCitationsAndReferences = (content: string, sources?: Array<{ metadata: { title: string; url: string } }>) => {
   if (!sources || sources.length === 0) {
@@ -227,7 +420,7 @@ const extractCitationsAndReferences = (content: string, sources?: Array<{ metada
 
 export async function POST(req: NextRequest) {
   try {
-    const { content, userQuestion, chatModel, sources }: BlogExportRequest = await req.json();
+    const { content, userQuestion, chatModel, sources, chatId, messageId, userId, guestId }: BlogExportRequest = await req.json();
 
     if (!content) {
       return NextResponse.json(
@@ -390,18 +583,57 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Prepare the final blog data
+    const finalBlogData = {
+      ...blogData,
+      modelUsed: modelUsed,
+      references: references,
+      // Merge authority links with any existing external links
+      externalLinks: [
+        ...(blogData.externalLinks || []),
+        ...authorityLinks
+      ]
+    };
+
+    // Save to database if chatId and messageId are provided
+    let savedExport = null;
+    if (chatId && messageId) {
+      try {
+        // Generate title and filename
+        const title = userQuestion || blogData.title || 'Blog Export';
+        const shortTitle = title.substring(0, 40).replace(/[^a-zA-Z0-9\s]/g, '').trim() || 'blog-post';
+        const fileName = `${shortTitle}-seo-optimized.html`;
+        
+        // Create HTML content (same as frontend would generate)
+        const htmlContent = generateBlogHTML(finalBlogData, title);
+        
+        // Calculate word count from content
+        const wordCount = finalBlogData.content ? 
+          finalBlogData.content.replace(/<[^>]*>/g, '').split(/\s+/).length : 0;
+
+        savedExport = await db.insert(blogExports).values({
+          chatId,
+          messageId,
+          userId: userId || null,
+          guestId: guestId || null,
+          title,
+          fileName,
+          htmlContent,
+          blogData: finalBlogData,
+          modelUsed,
+          wordCount,
+        }).returning();
+      } catch (dbError) {
+        console.error('Failed to save blog export to database:', dbError);
+        // Continue anyway - don't fail the whole request
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      data: {
-        ...blogData,
-        modelUsed: modelUsed,
-        references: references,
-        // Merge authority links with any existing external links
-        externalLinks: [
-          ...(blogData.externalLinks || []),
-          ...authorityLinks
-        ]
-      }
+      data: finalBlogData,
+      saved: !!savedExport,
+      exportId: savedExport?.[0]?.id
     });
 
   } catch (error) {

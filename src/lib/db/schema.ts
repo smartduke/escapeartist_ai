@@ -54,3 +54,18 @@ export const usage = pgTable('usage', {
   periodStart: timestamp('periodStart').notNull(),
   periodEnd: timestamp('periodEnd').notNull(),
 });
+
+export const blogExports = pgTable('blog_exports', {
+  id: serial('id').primaryKey(),
+  chatId: text('chatId').notNull().references(() => chats.id),
+  messageId: text('messageId').notNull(),
+  userId: text('userId'), // Can be null for guest users
+  guestId: text('guestId'), // For tracking guest sessions
+  title: text('title').notNull(),
+  fileName: text('fileName').notNull(),
+  htmlContent: text('htmlContent').notNull(),
+  blogData: jsonb('blogData').notNull(), // Store the complete blog data JSON
+  modelUsed: text('modelUsed'),
+  wordCount: integer('wordCount'),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+});
