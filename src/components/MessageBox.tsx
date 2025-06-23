@@ -440,11 +440,12 @@ const exportMessageAsBlogPost = async (message: Message, userMessage?: Message, 
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        content: message.content,
-        userQuestion: userMessage?.content,
-        chatModel: currentChatModel,
-      }),
+              body: JSON.stringify({
+          content: message.content,
+          userQuestion: userMessage?.content,
+          chatModel: currentChatModel,
+          sources: message.sources || [],
+        }),
     });
 
     // Remove loading toast
@@ -691,6 +692,59 @@ const exportMessageAsBlogPost = async (message: Message, userMessage?: Message, 
        color: #2c3e50;
      }
 
+    .references-section {
+      background: #f0f9ff;
+      padding: 30px;
+      border-radius: 12px;
+      margin: 40px 0;
+      border-left: 4px solid #0ea5e9;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .references-list {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      margin-top: 20px;
+    }
+    .reference-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 15px;
+      padding: 15px;
+      background: white;
+      border-radius: 8px;
+      border: 1px solid #e0f2fe;
+    }
+    .reference-number {
+      background: #0ea5e9;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-weight: bold;
+      font-size: 0.85em;
+      flex-shrink: 0;
+    }
+    .reference-details {
+      flex: 1;
+    }
+    .reference-title {
+      color: #0c4a6e;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.95em;
+      line-height: 1.4;
+      display: block;
+      margin-bottom: 4px;
+    }
+    .reference-title:hover {
+      color: #0ea5e9;
+      text-decoration: underline;
+    }
+    .reference-domain {
+      font-size: 0.8em;
+      color: #64748b;
+      font-style: italic;
+    }
          .internal-links, .external-links, .image-requirements {
        background: #fff3cd;
        padding: 20px;
@@ -733,7 +787,22 @@ const exportMessageAsBlogPost = async (message: Message, userMessage?: Message, 
       ${blogData.content && blogData.content.includes('<') ? blogData.content : convertMarkdownToHtml(blogData.content)}
     </div>
 
-
+    ${blogData.references && blogData.references.length > 0 ? `
+    <div class="references-section">
+      <h2>📚 References</h2>
+      <div class="references-list">
+        ${blogData.references.map((ref: any) => `
+          <div class="reference-item">
+            <span class="reference-number">[${ref.id}]</span>
+            <div class="reference-details">
+              <a href="${ref.url}" target="_blank" rel="noopener noreferrer" class="reference-title">${ref.title}</a>
+              <div class="reference-domain">${ref.domain}</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+    ` : ''}
 
     <div class="meta-info">
       <h2>📊 SEO Analysis & Meta Information</h2>
