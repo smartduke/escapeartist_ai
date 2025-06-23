@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// GET /api/blog-exports/[id] - Download specific blog export
+// POST /api/blog-exports - Download specific blog export
 export async function POST(req: NextRequest) {
   try {
     const { exportId } = await req.json();
@@ -112,6 +112,49 @@ export async function POST(req: NextRequest) {
     console.error('Error retrieving blog export:', error);
     return NextResponse.json(
       { error: 'Failed to retrieve blog export' },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE /api/blog-exports - Delete specific blog export
+export async function DELETE(req: NextRequest) {
+  try {
+    const { exportId } = await req.json();
+
+    if (!exportId) {
+      return NextResponse.json(
+        { error: 'exportId is required' },
+        { status: 400 }
+      );
+    }
+
+    // Check if export exists
+    const exportData = await db
+      .select({ id: blogExports.id })
+      .from(blogExports)
+      .where(eq(blogExports.id, exportId))
+      .limit(1);
+
+    if (!exportData.length) {
+      return NextResponse.json(
+        { error: 'Blog export not found' },
+        { status: 404 }
+      );
+    }
+
+    // Delete the export
+    await db.delete(blogExports).where(eq(blogExports.id, exportId));
+
+    return NextResponse.json({
+      success: true,
+      message: 'Blog export deleted successfully'
+    });
+
+  } catch (error) {
+    console.error('Error deleting blog export:', error);
+    return NextResponse.json(
+      { error: 'Failed to delete blog export' },
       { status: 500 }
     );
   }

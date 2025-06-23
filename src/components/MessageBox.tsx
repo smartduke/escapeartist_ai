@@ -462,6 +462,9 @@ const exportMessageAsBlogPost = async (message: Message, userMessage?: Message, 
     const blogData = result.data;
     
     console.log('✅ Blog export generated using model:', blogData.modelUsed);
+    
+    // Dispatch custom event to notify that a new blog export was created
+    window.dispatchEvent(new CustomEvent('blogExportCreated'));
 
     // Create comprehensive HTML blog post
     const blogHtml = `<!DOCTYPE html>

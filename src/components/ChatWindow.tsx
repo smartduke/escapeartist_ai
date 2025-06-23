@@ -276,6 +276,7 @@ const ChatWindow = ({ id }: { id?: string }) => {
   
   // Blog exports panel state
   const [showBlogExports, setShowBlogExports] = useState(false);
+  const [hasExports, setHasExports] = useState(false);
 
   const [chatModelProvider, setChatModelProvider] = useState<ChatModelProvider>(
     {
@@ -651,6 +652,47 @@ const ChatWindow = ({ id }: { id?: string }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isConfigReady, isReady, initialMessage]);
 
+  // Function to check for blog exports availability
+  const checkExportsAvailability = async () => {
+    if (!chatId && !user?.id) return;
+    
+    try {
+      const params = new URLSearchParams();
+      if (chatId) params.append('chatId', chatId);
+      if (user?.id) params.append('userId', user.id);
+      if (!user) params.append('guestId', 'guest-session');
+
+      const response = await fetch(`/api/blog-exports?${params}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setHasExports(data.exports.length > 0);
+      }
+    } catch (error) {
+      console.error('Failed to check exports availability:', error);
+    }
+  };
+
+  // Check for blog exports availability on component load
+  useEffect(() => {
+    if (isReady && (chatId || user?.id)) {
+      checkExportsAvailability();
+    }
+  }, [chatId, user?.id, isReady]);
+
+  // Listen for blog export creation events
+  useEffect(() => {
+    const handleBlogExportCreated = () => {
+      checkExportsAvailability();
+    };
+
+    window.addEventListener('blogExportCreated', handleBlogExportCreated);
+    
+    return () => {
+      window.removeEventListener('blogExportCreated', handleBlogExportCreated);
+    };
+  }, []);
+
   if (hasError) {
     return (
       <div className="relative">
@@ -688,6 +730,44 @@ const ChatWindow = ({ id }: { id?: string }) => {
               setFiles={setFiles}
               onMessageUpdate={handleMessageUpdate}
             />
+            
+            {/* Blog Exports Panel */}
+            {showBlogExports && (
+              <div className="fixed top-0 right-0 h-full w-96 bg-white dark:bg-gray-900 shadow-2xl z-50 overflow-y-auto">
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">Blog Exports</h2>
+                    <button
+                      onClick={() => setShowBlogExports(false)}
+                      className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                  <BlogExportsPanel 
+                    chatId={chatId} 
+                    userId={user?.id} 
+                    guestId={!user ? 'guest-session' : undefined}
+                    onExportsChange={setHasExports}
+                  />
+                </div>
+              </div>
+            )}
+            
+            {/* Blog Exports Toggle Button - Only show when there are exports */}
+            {hasExports && (
+              <button
+                onClick={() => setShowBlogExports(!showBlogExports)}
+                className="fixed bottom-24 right-6 lg:bottom-12 lg:right-8 p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 z-40"
+                title="View Blog Exports"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </button>
+            )}
           </>
         ) : (
           <>

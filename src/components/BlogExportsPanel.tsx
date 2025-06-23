@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Download, FileText, Calendar, Cpu, Hash, Eye } from 'lucide-react';
+import { Download, FileText, Calendar, Cpu, Hash, Eye, Trash2 } from 'lucide-react';
 
 interface BlogExport {
   id: number;
@@ -18,6 +18,7 @@ interface BlogExportsPanelProps {
   chatId?: string;
   userId?: string;
   guestId?: string;
+  onExportsChange?: (hasExports: boolean) => void;
 }
 
 const downloadFile = (filename: string, content: string, type: string) => {
@@ -32,10 +33,11 @@ const downloadFile = (filename: string, content: string, type: string) => {
   URL.revokeObjectURL(url);
 };
 
-const BlogExportsPanel = ({ chatId, userId, guestId }: BlogExportsPanelProps) => {
+const BlogExportsPanel = ({ chatId, userId, guestId, onExportsChange }: BlogExportsPanelProps) => {
   const [exports, setExports] = useState<BlogExport[]>([]);
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState<number | null>(null);
 
   const fetchExports = async () => {
     if (!chatId && !userId && !guestId) return;
@@ -52,6 +54,7 @@ const BlogExportsPanel = ({ chatId, userId, guestId }: BlogExportsPanelProps) =>
 
       if (data.success) {
         setExports(data.exports);
+        onExportsChange?.(data.exports.length > 0);
       }
     } catch (error) {
       console.error('Failed to fetch blog exports:', error);
@@ -75,36 +78,73 @@ const BlogExportsPanel = ({ chatId, userId, guestId }: BlogExportsPanelProps) =>
         downloadFile(fileName, data.export.htmlContent, 'text/html');
         
         // Show success toast
-        const successToast = document.createElement('div');
-        successToast.style.cssText = `
-          position: fixed;
-          top: 20px;
-          right: 20px;
-          background: #10b981;
-          color: white;
-          padding: 16px 24px;
-          border-radius: 8px;
-          z-index: 1000;
-          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        `;
-        successToast.innerHTML = `
-          <div style="display: flex; align-items: center; gap: 12px;">
-            <span>✅ Blog export downloaded successfully!</span>
-          </div>
-        `;
-        document.body.appendChild(successToast);
-        setTimeout(() => {
-          if (document.body.contains(successToast)) {
-            document.body.removeChild(successToast);
-          }
-        }, 3000);
+        showToast('✅ Blog export downloaded successfully!', '#10b981');
       }
     } catch (error) {
       console.error('Failed to download export:', error);
+      showToast('❌ Failed to download export', '#ef4444');
     } finally {
       setDownloading(null);
     }
+  };
+
+  const deleteExport = async (exportId: number, title: string) => {
+    if (!confirm(`Are you sure you want to delete "${title}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    setDeleting(exportId);
+    try {
+      const response = await fetch('/api/blog-exports', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ exportId })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Remove from local state
+        const updatedExports = exports.filter(exp => exp.id !== exportId);
+        setExports(updatedExports);
+        onExportsChange?.(updatedExports.length > 0);
+        showToast('✅ Blog export deleted successfully!', '#10b981');
+      } else {
+        showToast('❌ Failed to delete export', '#ef4444');
+      }
+    } catch (error) {
+      console.error('Failed to delete export:', error);
+      showToast('❌ Failed to delete export', '#ef4444');
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  const showToast = (message: string, backgroundColor: string) => {
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: ${backgroundColor};
+      color: white;
+      padding: 16px 24px;
+      border-radius: 8px;
+      z-index: 1000;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    `;
+    toast.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span>${message}</span>
+      </div>
+    `;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+      if (document.body.contains(toast)) {
+        document.body.removeChild(toast);
+      }
+    }, 3000);
   };
 
   useEffect(() => {
@@ -205,7 +245,7 @@ const BlogExportsPanel = ({ chatId, userId, guestId }: BlogExportsPanelProps) =>
               <div className="flex items-center gap-2 ml-3">
                 <button
                   onClick={() => downloadExport(export_.id, export_.fileName)}
-                  disabled={downloading === export_.id}
+                  disabled={downloading === export_.id || deleting === export_.id}
                   className="p-2 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Download Blog Export"
                 >
@@ -213,6 +253,19 @@ const BlogExportsPanel = ({ chatId, userId, guestId }: BlogExportsPanelProps) =>
                     <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
                   ) : (
                     <Download className="w-4 h-4" />
+                  )}
+                </button>
+                
+                <button
+                  onClick={() => deleteExport(export_.id, export_.title)}
+                  disabled={downloading === export_.id || deleting === export_.id}
+                  className="p-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Delete Blog Export"
+                >
+                  {deleting === export_.id ? (
+                    <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    <Trash2 className="w-4 h-4" />
                   )}
                 </button>
               </div>
