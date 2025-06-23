@@ -21,7 +21,7 @@ import {
   getCustomOpenaiModelName,
 } from '@/lib/config';
 import { searchHandlers } from '@/lib/search';
-import { trackUsage } from '@/lib/usage';
+import { trackUsage, checkUsageLimit } from '@/lib/usage';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -236,6 +236,51 @@ export const POST = async (req: Request) => {
         },
         { status: 400 },
       );
+    }
+
+    // Check usage limits for authenticated users
+    if (body.userId) {
+      const modelName = body.chatModel?.name || 'gpt_4o'; // Default model
+      const estimatedTokens = estimateTokens(message.content) + 1000; // Estimate input + average response
+      
+      try {
+        const usageCheck = await checkUsageLimit(body.userId, modelName);
+        
+        if (!usageCheck.canUse) {
+          return Response.json(
+            {
+              error: 'Usage limit exceeded',
+              details: {
+                message: `You have exceeded your ${modelName.replace(/_/g, '-')} usage limit for this month.`,
+                currentUsage: usageCheck.currentUsage,
+                limit: usageCheck.limit,
+                remaining: usageCheck.remaining,
+                model: modelName,
+              },
+            },
+            { status: 429 }
+          );
+        }
+
+        // Check if estimated usage would exceed limit
+        if (usageCheck.remaining < estimatedTokens) {
+          return Response.json(
+            {
+              error: 'Estimated usage would exceed limit',
+              details: {
+                message: `This request would exceed your remaining ${modelName.replace(/_/g, '-')} tokens (${usageCheck.remaining} remaining, ~${estimatedTokens} needed).`,
+                estimatedTokens,
+                remaining: usageCheck.remaining,
+                model: modelName,
+              },
+            },
+            { status: 429 }
+          );
+        }
+      } catch (error) {
+        console.error('Usage limit check failed:', error);
+        // Continue processing - don't block on usage check errors
+      }
     }
 
     const [chatModelProviders, embeddingModelProviders] = await Promise.all([

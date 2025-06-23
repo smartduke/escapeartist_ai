@@ -5,6 +5,8 @@ import MessageInput from './MessageInput';
 import { File, Message } from './ChatWindow';
 import MessageBox from './MessageBox';
 import MessageBoxLoading from './MessageBoxLoading';
+import { UsageLimitWarning } from './UsageLimitWarning';
+import { useAuth } from './auth/AuthProvider';
 
 const Chat = ({
   loading,
@@ -29,6 +31,7 @@ const Chat = ({
   setFiles: (files: File[]) => void;
   onMessageUpdate?: (messageId: string, newContent: string) => void;
 }) => {
+  const { user } = useAuth();
   const [dividerWidth, setDividerWidth] = useState(0);
   const dividerRef = useRef<HTMLDivElement | null>(null);
   const messageEnd = useRef<HTMLDivElement | null>(null);
@@ -71,7 +74,7 @@ const Chat = ({
     };
 
     if (messages.length === 1) {
-      document.title = `${messages[0].content.substring(0, 30)} - Perplexica`;
+      document.title = `${messages[0].content.substring(0, 30)} - Infoxai`;
     }
 
     if (messages[messages.length - 1]?.role == 'user') {
@@ -81,6 +84,12 @@ const Chat = ({
 
   return (
     <div className="flex flex-col space-y-6 pt-8 pb-44 lg:pb-32 sm:mx-4 md:mx-8">
+      {/* Usage limit warning for authenticated users */}
+      <UsageLimitWarning 
+        userId={user?.id} 
+        modelName="gpt_4o" // Could be dynamic based on current model selection
+      />
+      
       {messages.map((msg, i) => {
         const isLast = i === messages.length - 1;
 

@@ -63,12 +63,45 @@ export const POST = async (req: Request) => {
       return Response.json({ error: 'Invalid chat model' }, { status: 400 });
     }
 
-    const suggestions = await generateSuggestions(
-      {
-        chat_history: chatHistory,
-      },
-      llm,
-    );
+    let suggestions;
+    try {
+      suggestions = await generateSuggestions(
+        {
+          chat_history: chatHistory,
+        },
+        llm,
+      );
+    } catch (error) {
+      console.log(`Primary model failed for suggestions, trying fallback. Error: ${error}`);
+      
+      // Fallback to GPT-4o-mini for suggestions if primary model fails
+      const fallbackProvider = chatModelProviders['openai'];
+      const fallbackModel = fallbackProvider?.['gpt-4o-mini'];
+      
+      if (fallbackModel) {
+        console.log('Using GPT-4o-mini as fallback for suggestions');
+        try {
+          suggestions = await generateSuggestions(
+            {
+              chat_history: chatHistory,
+            },
+            fallbackModel.model,
+          );
+        } catch (fallbackError) {
+          console.error('Fallback model also failed for suggestions:', fallbackError);
+          return Response.json(
+            { message: 'Unable to generate suggestions at this time' },
+            { status: 500 },
+          );
+        }
+      } else {
+        console.error('No fallback model available for suggestions');
+        return Response.json(
+          { message: 'Unable to generate suggestions at this time' },
+          { status: 500 },
+        );
+      }
+    }
 
     return Response.json({ suggestions }, { status: 200 });
   } catch (err) {

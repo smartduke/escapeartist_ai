@@ -9,10 +9,21 @@ export const PROVIDER_INFO = {
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 
 const anthropicChatModels: Record<string, string>[] = [
+  // Claude 4 Models (Latest)
+  {
+    displayName: 'Claude Opus 4',
+    key: 'claude-opus-4-20250514',
+  },
+  {
+    displayName: 'Claude Sonnet 4',
+    key: 'claude-sonnet-4-20250514',
+  },
+  // Claude 3.7 Models
   {
     displayName: 'Claude 3.7 Sonnet',
     key: 'claude-3-7-sonnet-20250219',
   },
+  // Claude 3.5 Models
   {
     displayName: 'Claude 3.5 Haiku',
     key: 'claude-3-5-haiku-20241022',
@@ -25,6 +36,7 @@ const anthropicChatModels: Record<string, string>[] = [
     displayName: 'Claude 3.5 Sonnet',
     key: 'claude-3-5-sonnet-20240620',
   },
+  // Claude 3 Models
   {
     displayName: 'Claude 3 Opus',
     key: 'claude-3-opus-20240229',

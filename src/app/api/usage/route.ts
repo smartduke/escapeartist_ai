@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { usage, subscriptions } from '@/lib/db/schema';
 import { eq, and, gte, lte } from 'drizzle-orm';
-import { getServerUser } from '@/lib/supabase/server';
+import { getServerUserFromRequest } from '@/lib/supabase/server';
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await getServerUser();
+    const user = await getServerUserFromRequest(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await getServerUser();
+    const user = await getServerUserFromRequest(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -115,12 +115,14 @@ function getTokenLimits(plan: string) {
   
   // Get limits from environment variables
   const envVars = process.env;
-  const prefix = plan === 'free' ? 'FREE_LIMIT_' : 'PRO_LIMIT_';
+  const planPrefix = plan === 'free' ? 'FREE' : 'PRO';
+  const prefix = `${planPrefix}_LIMIT_`;
   
   Object.keys(envVars).forEach(key => {
     if (key.startsWith(prefix)) {
       const model = key.replace(prefix, '').toLowerCase();
-      limits[model] = parseInt(envVars[key] || '0');
+      const limit = parseInt(envVars[key] || '0');
+      limits[model] = limit;
     }
   });
   

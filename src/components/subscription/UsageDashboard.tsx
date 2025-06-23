@@ -68,8 +68,11 @@ export const UsageDashboard: React.FC = () => {
   };
 
   const usageByModel = getUsageByModel();
-  const totalTokensUsed = Object.values(usageByModel).reduce((sum, tokens) => sum + tokens, 0);
-  const totalLimit = Object.values(usageData.limits).reduce((sum, limit) => sum + limit, 0);
+  
+  // Calculate totals only for the 4 primary models
+  const primaryModels = ['gpt_4o_mini', 'gpt_4_1', 'claude_sonnet_4', 'gemini_2_5_pro'];
+  const totalTokensUsed = primaryModels.reduce((sum, model) => sum + (usageByModel[model] || 0), 0);
+  const totalLimit = primaryModels.reduce((sum, model) => sum + (usageData.limits[model] || 0), 0);
 
   const getUsagePercentage = (used: number, limit: number) => {
     return limit > 0 ? Math.min((used / limit) * 100, 100) : 0;
@@ -156,8 +159,9 @@ export const UsageDashboard: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Show models with configured limits first */}
-            {Object.entries(usageData.limits).map(([model, limit]) => {
+            {/* Show only the 4 primary models */}
+            {['gpt_4o_mini', 'gpt_4_1', 'claude_sonnet_4', 'gemini_2_5_pro'].map((model) => {
+              const limit = usageData.limits[model] || 0;
               const used = usageByModel[model] || 0;
               const percentage = getUsagePercentage(used, limit);
               const remaining = Math.max(0, limit - used);
@@ -169,8 +173,12 @@ export const UsageDashboard: React.FC = () => {
                 >
                   <div className="flex items-center justify-between mb-3">
                     <div>
-                      <h4 className="font-medium text-gray-900 dark:text-white capitalize">
-                        {model.replace(/[-_]/g, ' ')}
+                      <h4 className="font-medium text-gray-900 dark:text-white">
+                        {model === 'gpt_4o_mini' ? 'GPT-4o Mini' :
+                         model === 'gpt_4_1' ? 'GPT-4.1' :
+                         model === 'claude_sonnet_4' ? 'Claude 4 Sonnet' :
+                         model === 'gemini_2_5_pro' ? 'Gemini 2.5 Pro' :
+                         model.replace(/[-_]/g, ' ')}
                       </h4>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
                         {used.toLocaleString()} / {limit.toLocaleString()} tokens
@@ -205,49 +213,6 @@ export const UsageDashboard: React.FC = () => {
                 </div>
               );
             })}
-
-            {/* Show models with usage but no configured limits */}
-            {Object.entries(usageByModel)
-              .filter(([model]) => !usageData.limits[model])
-              .map(([model, used]) => (
-                <div
-                  key={model}
-                  className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700"
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <h4 className="font-medium text-gray-900 dark:text-white capitalize">
-                        {model.replace(/[-_]/g, ' ')}
-                      </h4>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {used.toLocaleString()} tokens used
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-lg font-semibold text-blue-600 dark:text-blue-400">
-                        {used.toLocaleString()}
-                      </div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        No limit set
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mb-2">
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                      <div
-                        className="h-2 rounded-full transition-all duration-300 bg-blue-500"
-                        style={{ width: '100%' }}
-                      ></div>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
-                    <span>Used: {used.toLocaleString()} tokens</span>
-                    <span className="text-blue-600 dark:text-blue-400">Unlimited</span>
-                  </div>
-                </div>
-              ))}
           </div>
         )}
       </div>

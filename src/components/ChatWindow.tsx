@@ -265,7 +265,7 @@ const ChatWindow = ({ id }: { id?: string }) => {
   const searchParams = useSearchParams();
   const initialMessage = searchParams.get('q');
   const templateParam = searchParams.get('template');
-  const { user, guestId, guestChatCount, maxGuestChats, canCreateChat, incrementGuestChatCount } = useAuth();
+  const { user, guestId, guestChatCount, maxGuestChats, canCreateChat, incrementGuestChatCount, isLoading: authLoading } = useAuth();
 
   const [chatId, setChatId] = useState<string | undefined>(id);
   const [newChatCreated, setNewChatCreated] = useState(false);
@@ -295,16 +295,6 @@ const ChatWindow = ({ id }: { id?: string }) => {
   const [hasError, setHasError] = useState(false);
   const [isReady, setIsReady] = useState(false);
 
-  useEffect(() => {
-    checkConfig(
-      setChatModelProvider,
-      setEmbeddingModelProvider,
-      setIsConfigReady,
-      setHasError,
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const [loading, setLoading] = useState(false);
   const [messageAppeared, setMessageAppeared] = useState(false);
 
@@ -328,6 +318,52 @@ const ChatWindow = ({ id }: { id?: string }) => {
   const [isMessagesLoaded, setIsMessagesLoaded] = useState(false);
 
   const [notFound, setNotFound] = useState(false);
+
+  useEffect(() => {
+    checkConfig(
+      setChatModelProvider,
+      setEmbeddingModelProvider,
+      setIsConfigReady,
+      setHasError,
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Listen for localStorage changes to update model selection in real-time
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'chatModel' || e.key === 'chatModelProvider') {
+        // Re-check config when model selection changes
+        checkConfig(
+          setChatModelProvider,
+          setEmbeddingModelProvider,
+          setIsConfigReady,
+          setHasError,
+        );
+      }
+    };
+
+    // Listen for storage events (changes from other tabs/windows)
+    window.addEventListener('storage', handleStorageChange);
+
+    // For same-tab localStorage changes, we need a custom event
+    const handleLocalStorageChange = () => {
+      checkConfig(
+        setChatModelProvider,
+        setEmbeddingModelProvider,
+        setIsConfigReady,
+        setHasError,
+      );
+    };
+
+    // Listen for custom model change events
+    window.addEventListener('modelSelectionChanged', handleLocalStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('modelSelectionChanged', handleLocalStorageChange);
+    };
+  }, []);
 
   useEffect(() => {
     if (
@@ -589,6 +625,40 @@ const ChatWindow = ({ id }: { id?: string }) => {
         guestId: !user ? guestId : null,
       }),
     });
+
+    // Handle usage limit errors
+    if (res.status === 429) {
+      try {
+        const errorData = await res.json();
+        setLoading(false);
+        
+        if (errorData.details?.feature) {
+          // Usage limit error
+          toast.error(
+            `Usage Limit Exceeded: ${errorData.details.message}`, 
+            { 
+              duration: 6000,
+              style: {
+                maxWidth: '500px',
+              }
+            }
+          );
+        } else {
+          toast.error(errorData.details?.message || 'Request rate limited. Please try again later.');
+        }
+        return;
+      } catch (parseError) {
+        toast.error('Request rate limited. Please try again later.');
+        setLoading(false);
+        return;
+      }
+    }
+
+    if (!res.ok) {
+      setLoading(false);
+      toast.error('Failed to send message. Please try again.');
+      return;
+    }
 
     if (!res.body) throw new Error('No response body');
 

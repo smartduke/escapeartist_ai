@@ -762,7 +762,7 @@ const Focus = React.forwardRef<FocusRef, {
                           <Search className="text-gray-400 dark:text-gray-500" size={20} />
                         </div>
                         <p className="text-gray-600 dark:text-gray-400 text-sm">
-                          No templates found matching "{searchQuery}"
+                          No templates found matching &quot;{searchQuery}&quot;
                           {selectedCategory !== 'all' && ` in ${selectedCategory}`}
                         </p>
                       </div>
