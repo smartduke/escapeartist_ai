@@ -91,55 +91,55 @@ const WeatherWidget = () => {
     <div className={cn(
       "bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl",
       "border border-gray-200/40 dark:border-gray-700/40",
-      "rounded-xl shadow-md hover:shadow-lg transition-all duration-300",
-      "flex items-center justify-between lg:justify-start gap-3 px-4 py-2.5 h-auto w-full",
+      "rounded-lg shadow-md hover:shadow-lg transition-all duration-300",
+      "flex items-center justify-between lg:justify-start gap-2 px-3 py-1.5 h-auto w-full",
       "group hover:bg-white dark:hover:bg-gray-900/98"
     )}>
       {loading ? (
-        <div className="flex items-center gap-3 w-full animate-pulse">
-          <div className="h-8 w-8 rounded-full bg-gradient-to-r from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600" />
-          <div className="space-y-2 flex-1">
-            <div className="h-2.5 w-20 rounded-full bg-gradient-to-r from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600" />
+        <div className="flex items-center gap-2 w-full animate-pulse">
+          <div className="h-6 w-6 rounded-full bg-gradient-to-r from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600" />
+          <div className="space-y-1 flex-1">
             <div className="h-2 w-16 rounded-full bg-gradient-to-r from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600" />
+            <div className="h-1.5 w-12 rounded-full bg-gradient-to-r from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600" />
           </div>
         </div>
       ) : (
         <>
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
             <div className="relative">
               <img
                 src={`/weather-ico/${data.icon}.svg`}
                 alt={data.condition}
-                className="h-8 w-8 transition-transform duration-300 group-hover:scale-110"
+                className="h-6 w-6 transition-transform duration-300 group-hover:scale-110"
               />
             </div>
             <div className="flex flex-col">
-              <span className="text-base font-semibold text-gray-900 dark:text-white">
+              <span className="text-sm font-semibold text-gray-900 dark:text-white">
                 {data.temperature}°
               </span>
-              <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+              <span className="text-xs text-gray-600 dark:text-gray-400 font-medium leading-none">
                 {data.condition}
               </span>
             </div>
           </div>
           
-          <div className="hidden lg:flex items-center gap-3">
-            <div className="h-6 w-[1px] bg-gradient-to-b from-transparent via-gray-300 to-transparent dark:via-gray-600" />
+          <div className="hidden lg:flex items-center gap-2">
+            <div className="h-4 w-[1px] bg-gradient-to-b from-transparent via-gray-300 to-transparent dark:via-gray-600" />
             
-            <div className="flex items-center gap-3 text-xs">
-              <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
-                <Wind className="w-3.5 h-3.5" />
+            <div className="flex items-center gap-2 text-xs">
+              <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
+                <Wind className="w-3 h-3" />
                 <span className="font-medium">{data.windSpeed}km/h</span>
               </div>
-              <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
-                <Droplets className="w-3.5 h-3.5" />
+              <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
+                <Droplets className="w-3 h-3" />
                 <span className="font-medium">{data.humidity}%</span>
               </div>
             </div>
             
-            <div className="h-6 w-[1px] bg-gradient-to-b from-transparent via-gray-300 to-transparent dark:via-gray-600" />
+            <div className="h-4 w-[1px] bg-gradient-to-b from-transparent via-gray-300 to-transparent dark:via-gray-600" />
             
-            <div className="text-sm">
+            <div className="text-xs">
               <span className="font-semibold text-gray-900 dark:text-white">
                 {data.location}
               </span>
@@ -147,16 +147,16 @@ const WeatherWidget = () => {
           </div>
           
           {/* Mobile layout */}
-          <div className="lg:hidden flex items-center gap-2.5 text-xs">
-            <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
-              <Wind className="w-3 h-3" />
+          <div className="lg:hidden flex items-center gap-2 text-xs">
+            <div className="flex items-center gap-0.5 text-gray-600 dark:text-gray-400">
+              <Wind className="w-2.5 h-2.5" />
               <span>{data.windSpeed}</span>
             </div>
-            <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
-              <Droplets className="w-3 h-3" />
+            <div className="flex items-center gap-0.5 text-gray-600 dark:text-gray-400">
+              <Droplets className="w-2.5 h-2.5" />
               <span>{data.humidity}%</span>
             </div>
-            <div className="text-sm font-medium text-gray-900 dark:text-white">
+            <div className="text-xs font-medium text-gray-900 dark:text-white">
               {data.location}
             </div>
           </div>
