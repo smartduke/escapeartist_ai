@@ -36,6 +36,7 @@ import {
   FileText,
   FileDown,
   File,
+  PenTool,
 } from 'lucide-react';
 import Markdown, { MarkdownToJSX } from 'markdown-to-jsx';
 import Copy from './MessageActions/Copy';
@@ -281,6 +282,685 @@ const exportMessageAsPDF = async (message: Message, userMessage?: Message) => {
     doc.save(`${filename}.pdf`);
   } catch (error) {
     console.error('Failed to export PDF:', error);
+  }
+};
+
+const convertMarkdownToHtml = (markdown: string): string => {
+  if (!markdown) return '';
+  
+  let html = markdown;
+  
+  // Remove think tags
+  html = html.replace(/<think>[\s\S]*?<\/think>/g, '');
+  
+  // Split into lines for better processing
+  let lines = html.split('\n');
+  let processedLines: string[] = [];
+  let inCodeBlock = false;
+  let inList = false;
+  let currentListItems: string[] = [];
+  
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i];
+    const trimmedLine = line.trim();
+    
+    // Handle code blocks
+    if (trimmedLine.startsWith('```')) {
+      if (inCodeBlock) {
+        processedLines.push('</code></pre>');
+        inCodeBlock = false;
+      } else {
+        processedLines.push('<pre><code>');
+        inCodeBlock = true;
+      }
+      continue;
+    }
+    
+    if (inCodeBlock) {
+      processedLines.push(line);
+      continue;
+    }
+    
+    // Handle headers (order matters - longest first)
+    if (trimmedLine.match(/^#{1,6}\s/)) {
+      // Close any open lists
+      if (inList && currentListItems.length > 0) {
+        processedLines.push('<ul>');
+        processedLines.push(...currentListItems);
+        processedLines.push('</ul>');
+        currentListItems = [];
+        inList = false;
+      }
+      
+      const headerMatch = trimmedLine.match(/^(#{1,6})\s(.+)$/);
+      if (headerMatch) {
+        const level = headerMatch[1].length;
+        const text = headerMatch[2];
+        processedLines.push(`<h${level}>${text}</h${level}>`);
+        continue;
+      }
+    }
+    
+    // Handle unordered lists
+    if (trimmedLine.match(/^[\*\-\+]\s/)) {
+      const listItem = trimmedLine.replace(/^[\*\-\+]\s/, '');
+      currentListItems.push(`<li>${listItem}</li>`);
+      inList = true;
+      continue;
+    }
+    
+    // Handle ordered lists
+    if (trimmedLine.match(/^\d+\.\s/)) {
+      const listItem = trimmedLine.replace(/^\d+\.\s/, '');
+      currentListItems.push(`<li>${listItem}</li>`);
+      inList = true;
+      continue;
+    }
+    
+    // Close list if we're not in a list item anymore
+    if (inList && !trimmedLine.match(/^[\*\-\+\d+\.]\s/) && trimmedLine !== '') {
+      processedLines.push('<ul>');
+      processedLines.push(...currentListItems);
+      processedLines.push('</ul>');
+      currentListItems = [];
+      inList = false;
+    }
+    
+    // Handle empty lines
+    if (trimmedLine === '') {
+      processedLines.push('');
+      continue;
+    }
+    
+    // Convert inline formatting
+    line = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    line = line.replace(/(?<!\*)\*([^\*]+)\*(?!\*)/g, '<em>$1</em>');
+    line = line.replace(/`([^`]+)`/g, '<code>$1</code>');
+    line = line.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+    
+    // Remove citation numbers
+    line = line.replace(/\[\d+\]/g, '');
+    
+    // Wrap in paragraph if it's regular text
+    if (trimmedLine && !trimmedLine.match(/^<[h1-6]>/)) {
+      processedLines.push(`<p>${line.trim()}</p>`);
+    } else {
+      processedLines.push(line);
+    }
+  }
+  
+  // Close any remaining list
+  if (inList && currentListItems.length > 0) {
+    processedLines.push('<ul>');
+    processedLines.push(...currentListItems);
+    processedLines.push('</ul>');
+  }
+  
+  html = processedLines.join('\n');
+  
+  // Clean up extra whitespace and empty paragraphs
+  html = html.replace(/\n\s*\n/g, '\n');
+  html = html.replace(/<p><\/p>/g, '');
+  html = html.replace(/<p>\s*<\/p>/g, '');
+  
+  return html.trim();
+};
+
+const exportMessageAsBlogPost = async (message: Message, userMessage?: Message, currentChatModel?: any) => {
+  try {
+    // Show loading state
+    const loadingToast = document.createElement('div');
+    loadingToast.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #1f2937;
+      color: white;
+      padding: 16px 24px;
+      border-radius: 8px;
+      z-index: 1000;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    `;
+    loadingToast.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="width: 20px; height: 20px; border: 2px solid #3b82f6; border-top: 2px solid transparent; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+        <span>Generating SEO-optimized blog post...</span>
+      </div>
+      <style>
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      </style>
+    `;
+    document.body.appendChild(loadingToast);
+
+    const response = await fetch('/api/blog-export', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        content: message.content,
+        userQuestion: userMessage?.content,
+        chatModel: currentChatModel,
+      }),
+    });
+
+    // Remove loading toast
+    document.body.removeChild(loadingToast);
+
+    if (!response.ok) {
+      throw new Error('Failed to generate blog post');
+    }
+
+    const result = await response.json();
+    const blogData = result.data;
+    
+    console.log('✅ Blog export generated using model:', blogData.modelUsed);
+
+    // Create comprehensive HTML blog post
+    const blogHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${blogData.title}</title>
+  <meta name="description" content="${blogData.metaDescription}">
+  <meta name="keywords" content="${[blogData.keywords?.focus || '', ...(blogData.keywords?.related || []), ...(blogData.keywords?.longTail || []), ...(blogData.keywords?.lsi || [])].filter(k => k).join(', ')}">
+  
+  <!-- Open Graph Meta Tags -->
+  <meta property="og:title" content="${blogData.title}">
+  <meta property="og:description" content="${blogData.metaDescription}">
+  <meta property="og:type" content="article">
+  
+  <!-- Twitter Card Meta Tags -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="${blogData.title}">
+  <meta name="twitter:description" content="${blogData.metaDescription}">
+  
+  <!-- Schema.org JSON-LD -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "${blogData.title}",
+    "description": "${blogData.metaDescription}",
+    "author": {
+      "@type": "Organization",
+      "name": "Perplexica AI"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "Perplexica AI"
+    },
+    "datePublished": "${new Date().toISOString()}",
+    "dateModified": "${new Date().toISOString()}"
+  }
+  </script>
+  
+
+  
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      color: #333;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      color: #2c3e50;
+      margin-top: 2em;
+      margin-bottom: 0.5em;
+    }
+         h1 { font-size: 2.5em; border-bottom: 3px solid #3498db; padding-bottom: 10px; }
+     h2 { font-size: 2em; color: #34495e; }
+     h3 { font-size: 1.5em; }
+     h4 { font-size: 1.25em; color: #2c3e50; }
+     h5 { font-size: 1.1em; color: #2c3e50; }
+     h6 { font-size: 1em; color: #2c3e50; font-weight: 600; }
+         .meta-info {
+       background: #f8f9fa;
+       padding: 30px;
+       border-radius: 12px;
+       margin: 30px 0;
+       border-left: 4px solid #3498db;
+       box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+     }
+     .seo-section, .yoast-analysis, .keywords-section, .content-structure {
+       background: white;
+       padding: 20px;
+       border-radius: 8px;
+       margin: 20px 0;
+       border: 1px solid #e1e8ed;
+     }
+     .analysis-grid {
+       display: grid;
+       grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+       gap: 15px;
+       margin: 15px 0;
+     }
+     .metric {
+       display: flex;
+       justify-content: space-between;
+       align-items: center;
+       padding: 12px 15px;
+       border-radius: 6px;
+       border-left: 4px solid #ddd;
+     }
+     .metric.good {
+       background: #d4edda;
+       border-left-color: #28a745;
+       color: #155724;
+     }
+     .metric.warning {
+       background: #fff3cd;
+       border-left-color: #ffc107;
+       color: #856404;
+     }
+     .metric.error {
+       background: #f8d7da;
+       border-left-color: #dc3545;
+       color: #721c24;
+     }
+     .metric .label {
+       font-weight: 600;
+       font-size: 0.9em;
+     }
+     .metric .value {
+       font-weight: bold;
+       font-size: 0.95em;
+     }
+     .keyword-categories {
+       display: flex;
+       flex-direction: column;
+       gap: 15px;
+     }
+     .keyword-group {
+       display: flex;
+       flex-wrap: wrap;
+       align-items: center;
+       gap: 8px;
+       margin: 10px 0;
+     }
+     .keyword {
+       padding: 6px 12px;
+       border-radius: 20px;
+       font-size: 0.85em;
+       font-weight: 500;
+       white-space: nowrap;
+     }
+     .keyword.focus {
+       background: #e3f2fd;
+       color: #1976d2;
+       border: 2px solid #1976d2;
+     }
+     .keyword.related {
+       background: #e8f5e8;
+       color: #2e7d32;
+     }
+     .keyword.longtail {
+       background: #fff3e0;
+       color: #f57c00;
+     }
+     .keyword.lsi {
+       background: #f3e5f5;
+       color: #7b1fa2;
+     }
+     .focus-keyword {
+       background: linear-gradient(45deg, #1976d2, #42a5f5);
+       color: white;
+       padding: 4px 12px;
+       border-radius: 20px;
+       font-weight: bold;
+       font-size: 0.9em;
+     }
+     .structure-grid {
+       display: grid;
+       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+       gap: 15px;
+       margin: 15px 0;
+     }
+     .structure-item {
+       display: flex;
+       justify-content: space-between;
+       align-items: center;
+       padding: 10px 15px;
+       background: #f8f9fa;
+       border-radius: 6px;
+     }
+     .structure-item .label {
+       font-weight: 600;
+       color: #495057;
+     }
+     .structure-item .value {
+       font-weight: bold;
+       color: #212529;
+     }
+     .structure-item .value.good {
+       color: #28a745;
+     }
+     .structure-item .value.warning {
+       color: #ffc107;
+     }
+     table {
+       width: 100%;
+       border-collapse: collapse;
+       margin: 20px 0;
+       font-size: 0.9em;
+     }
+     table th, table td {
+       border: 1px solid #ddd;
+       padding: 12px;
+       text-align: left;
+     }
+     table th {
+       background-color: #f8f9fa;
+       font-weight: bold;
+       color: #495057;
+     }
+     table tr:nth-child(even) {
+       background-color: #f8f9fa;
+     }
+     table tr:hover {
+       background-color: #e9ecef;
+     }
+     blockquote {
+       border-left: 4px solid #007bff;
+       margin: 20px 0;
+       padding: 15px 20px;
+       background-color: #f8f9fa;
+       font-style: italic;
+       color: #495057;
+     }
+     .highlight {
+       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+       color: white;
+       padding: 20px;
+       border-radius: 8px;
+       margin: 20px 0;
+       box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+     }
+     ul li, ol li {
+       margin-bottom: 8px;
+       line-height: 1.6;
+     }
+     ul li strong, ol li strong {
+       color: #2c3e50;
+     }
+
+         .internal-links, .external-links, .image-requirements {
+       background: #fff3cd;
+       padding: 20px;
+       border-radius: 8px;
+       margin: 20px 0;
+       border-left: 4px solid #ffc107;
+     }
+     .external-links {
+       background: #e2f3ff;
+       border-left-color: #2196f3;
+     }
+     .image-requirements {
+       background: #f0f4f8;
+       border-left-color: #607d8b;
+     }
+    .seo-recommendations {
+      background: #d1ecf1;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+      border-left: 4px solid #17a2b8;
+    }
+    .generated-by {
+      text-align: center;
+      margin-top: 50px;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      color: #6c757d;
+    }
+  </style>
+</head>
+<body>
+  <article>
+    <h1>${blogData.title}</h1>
+    
+
+
+    <div class="content">
+      ${blogData.content && blogData.content.includes('<') ? blogData.content : convertMarkdownToHtml(blogData.content)}
+    </div>
+
+
+
+    <div class="meta-info">
+      <h2>📊 SEO Analysis & Meta Information</h2>
+      
+      <div class="seo-section">
+        <h3>🎯 Focus Keyword & SEO Settings</h3>
+        <p><strong>Focus Keyword:</strong> <span class="focus-keyword">${blogData.focusKeyword}</span></p>
+        <p><strong>Meta Description:</strong> ${blogData.metaDescription}</p>
+        <p><strong>URL Slug:</strong> /${blogData.urlSlug}</p>
+      </div>
+
+      <div class="yoast-analysis">
+        <h3>🟢 SEO Score</h3>
+        <div class="analysis-grid">
+          <div class="metric ${blogData.yoastAnalysis?.titleLength >= 50 && blogData.yoastAnalysis?.titleLength <= 60 ? 'good' : 'warning'}">
+            <span class="label">Title Length:</span>
+            <span class="value">${blogData.yoastAnalysis?.titleLength || 0} chars</span>
+          </div>
+          <div class="metric ${blogData.yoastAnalysis?.metaLength >= 150 && blogData.yoastAnalysis?.metaLength <= 160 ? 'good' : 'warning'}">
+            <span class="label">Meta Length:</span>
+            <span class="value">${blogData.yoastAnalysis?.metaLength || 0} chars</span>
+          </div>
+          <div class="metric ${blogData.yoastAnalysis?.keywordInTitle ? 'good' : 'error'}">
+            <span class="label">Keyword in Title:</span>
+            <span class="value">${blogData.yoastAnalysis?.keywordInTitle ? '✅ Yes' : '❌ No'}</span>
+          </div>
+          <div class="metric ${blogData.yoastAnalysis?.keywordInMeta ? 'good' : 'error'}">
+            <span class="label">Keyword in Meta:</span>
+            <span class="value">${blogData.yoastAnalysis?.keywordInMeta ? '✅ Yes' : '❌ No'}</span>
+          </div>
+          <div class="metric ${blogData.yoastAnalysis?.keywordInFirstParagraph ? 'good' : 'error'}">
+            <span class="label">Keyword in First 100 words:</span>
+            <span class="value">${blogData.yoastAnalysis?.keywordInFirstParagraph ? '✅ Yes' : '❌ No'}</span>
+          </div>
+          <div class="metric ${parseFloat(blogData.yoastAnalysis?.keywordDensity || '0') >= 0.5 && parseFloat(blogData.yoastAnalysis?.keywordDensity || '0') <= 2.5 ? 'good' : 'warning'}">
+            <span class="label">Keyword Density:</span>
+            <span class="value">${blogData.yoastAnalysis?.keywordDensity || '0%'}</span>
+          </div>
+          <div class="metric ${(blogData.yoastAnalysis?.readabilityScore || 0) >= 60 ? 'good' : 'warning'}">
+            <span class="label">Readability Score:</span>
+            <span class="value">${blogData.yoastAnalysis?.readabilityScore || 0}</span>
+          </div>
+          <div class="metric ${blogData.yoastAnalysis?.sentenceLength === 'Good' ? 'good' : 'warning'}">
+            <span class="label">Sentence Length:</span>
+            <span class="value">${blogData.yoastAnalysis?.sentenceLength || 'Unknown'}</span>
+          </div>
+          <div class="metric ${parseFloat(blogData.yoastAnalysis?.passiveVoice || '100') < 10 ? 'good' : 'warning'}">
+            <span class="label">Passive Voice:</span>
+            <span class="value">${blogData.yoastAnalysis?.passiveVoice || '0%'}</span>
+          </div>
+          <div class="metric ${parseFloat(blogData.yoastAnalysis?.transitionWords || '0') >= 30 ? 'good' : 'warning'}">
+            <span class="label">Transition Words:</span>
+            <span class="value">${blogData.yoastAnalysis?.transitionWords || '0%'}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="keywords-section">
+        <h3>🔑 Keyword Strategy</h3>
+        <div class="keyword-categories">
+          <div class="keyword-group">
+            <strong>Focus Keyword:</strong>
+            <span class="keyword focus">${blogData.keywords?.focus || blogData.focusKeyword}</span>
+          </div>
+          ${blogData.keywords?.related ? `
+          <div class="keyword-group">
+            <strong>Related Keywords:</strong>
+            ${blogData.keywords.related.map((keyword: string) => `<span class="keyword related">${keyword}</span>`).join('')}
+          </div>
+          ` : ''}
+          ${blogData.keywords?.longTail ? `
+          <div class="keyword-group">
+            <strong>Long-tail Keywords:</strong>
+            ${blogData.keywords.longTail.map((keyword: string) => `<span class="keyword longtail">${keyword}</span>`).join('')}
+          </div>
+          ` : ''}
+          ${blogData.keywords?.lsi ? `
+          <div class="keyword-group">
+            <strong>LSI Keywords:</strong>
+            ${blogData.keywords.lsi.map((keyword: string) => `<span class="keyword lsi">${keyword}</span>`).join('')}
+          </div>
+          ` : ''}
+        </div>
+      </div>
+
+      <div class="content-structure">
+        <h3>📋 Content Structure Analysis</h3>
+        <div class="structure-grid">
+          <div class="structure-item">
+            <span class="label">Word Count:</span>
+            <span class="value ${(blogData.contentStructure?.wordCount || 0) >= 800 ? 'good' : 'warning'}">${blogData.contentStructure?.wordCount || 0} words</span>
+          </div>
+          <div class="structure-item">
+            <span class="label">Headings:</span>
+            <span class="value">H1: ${blogData.contentStructure?.headings?.h1 || 0}, H2: ${blogData.contentStructure?.headings?.h2 || 0}, H3: ${blogData.contentStructure?.headings?.h3 || 0}</span>
+          </div>
+          <div class="structure-item">
+            <span class="label">Paragraphs:</span>
+            <span class="value">${blogData.contentStructure?.paragraphs || 0}</span>
+          </div>
+          <div class="structure-item">
+            <span class="label">Sentences:</span>
+            <span class="value">${blogData.contentStructure?.sentences || 0}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    ${blogData.internalLinks && blogData.internalLinks.length > 0 ? `
+    <div class="internal-links">
+      <h3>🔗 Internal Linking Opportunities</h3>
+      <ul>
+        ${blogData.internalLinks.map((link: any) => `
+          <li>
+            <strong>Anchor Text:</strong> "${link.anchorText}" 
+            <br><strong>Suggested URL:</strong> ${link.suggestedUrl}
+            <br><strong>Placement:</strong> ${link.placement || link.context}
+          </li>
+        `).join('')}
+      </ul>
+    </div>
+    ` : ''}
+
+    ${blogData.externalLinks && blogData.externalLinks.length > 0 ? `
+    <div class="external-links">
+      <h3>🌐 External Links (Authority Building)</h3>
+      <ul>
+        ${blogData.externalLinks.map((link: any) => `
+          <li>
+            <strong>Anchor Text:</strong> "${link.anchorText}" 
+            <br><strong>Domain:</strong> ${link.domain}
+            <br><strong>Context:</strong> ${link.context}
+          </li>
+        `).join('')}
+      </ul>
+    </div>
+    ` : ''}
+
+    ${blogData.imageRequirements && blogData.imageRequirements.length > 0 ? `
+    <div class="image-requirements">
+      <h3>🖼️ Image SEO Requirements</h3>
+      <ul>
+        ${blogData.imageRequirements.map((img: any) => `
+          <li>
+            <strong>Alt Text:</strong> "${img.altText}" 
+            <br><strong>Placement:</strong> ${img.placement}
+            <br><strong>Purpose:</strong> ${img.purpose}
+          </li>
+        `).join('')}
+      </ul>
+    </div>
+    ` : ''}
+
+    ${blogData.seoRecommendations && blogData.seoRecommendations.length > 0 ? `
+    <div class="seo-recommendations">
+      <h3>🚀 SEO Recommendations</h3>
+      <ul>
+        ${blogData.seoRecommendations.map((rec: string) => `<li>${rec}</li>`).join('')}
+      </ul>
+    </div>
+    ` : ''}
+  </article>
+
+  <div class="generated-by">
+    <p>Generated by <strong>Perplexica AI</strong> - Advanced AI Search Engine</p>
+    <p>Model Used: <strong>${blogData.modelUsed || 'Unknown'}</strong></p>
+    <p>Exported on: ${new Date().toLocaleString()}</p>
+  </div>
+</body>
+</html>`;
+
+    // Download the HTML file
+    const title = userMessage?.content || message.content;
+    const shortContent = title.substring(0, 40).replace(/[^a-zA-Z0-9\s]/g, '').trim() || 'blog-post';
+    downloadFile(`${shortContent}-seo-optimized.html`, blogHtml, 'text/html');
+
+    // Show success toast
+    const successToast = document.createElement('div');
+    successToast.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #10b981;
+      color: white;
+      padding: 16px 24px;
+      border-radius: 8px;
+      z-index: 1000;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    `;
+    successToast.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span>✅ SEO-optimized blog post generated successfully!</span>
+      </div>
+      <div style="font-size: 12px; margin-top: 8px; opacity: 0.9;">
+        Generated using: ${blogData.modelUsed || 'Unknown'}
+      </div>
+    `;
+    document.body.appendChild(successToast);
+    setTimeout(() => {
+      document.body.removeChild(successToast);
+    }, 3000);
+
+  } catch (error) {
+    console.error('Blog export error:', error);
+    
+    // Show error toast
+    const errorToast = document.createElement('div');
+    errorToast.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #ef4444;
+      color: white;
+      padding: 16px 24px;
+      border-radius: 8px;
+      z-index: 1000;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    `;
+    errorToast.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span>❌ Failed to generate blog post. Please try again.</span>
+      </div>
+    `;
+    document.body.appendChild(errorToast);
+    setTimeout(() => {
+      document.body.removeChild(errorToast);
+    }, 3000);
   }
 };
 
@@ -981,10 +1661,11 @@ const MessageBox = ({
                         {onEditStart && !isEditing && (
                           <button
                             onClick={onEditStart}
-                            className="p-2 text-black/70 dark:text-white/70 rounded-xl hover:bg-light-secondary dark:hover:bg-dark-secondary transition duration-200 hover:text-black dark:hover:text-white"
+                            className="py-2 px-3 text-black/70 dark:text-white/70 rounded-xl hover:bg-light-secondary dark:hover:bg-dark-secondary transition duration-200 hover:text-black dark:hover:text-white flex flex-row items-center space-x-1"
                             title="Edit message"
                           >
                             <Edit3 size={18} />
+                            <p className="text-xs font-medium">Edit</p>
                           </button>
                         )}
                       </div>
@@ -1043,6 +1724,13 @@ const MessageBox = ({
                                 >
                                   <File size={17} className="text-[#24A0ED]" />
                                   Export as Word
+                                </button>
+                                <button
+                                  className="flex items-center gap-2 px-4 py-2 text-left hover:bg-light-secondary dark:hover:bg-dark-primary transition-colors text-black dark:text-white rounded-lg font-medium"
+                                  onClick={() => exportMessageAsBlogPost(message, message.role === 'assistant' && messageIndex > 0 ? history[messageIndex - 1] : undefined)}
+                                >
+                                  <PenTool size={17} className="text-[#24A0ED]" />
+                                  Export as Blog Post
                                 </button>
                               </div>
                             </PopoverPanel>
