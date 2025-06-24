@@ -307,17 +307,21 @@ const ChatWindow = ({ id }: { id?: string }) => {
   const [focusMode, setFocusMode] = useState(templateParam || 'webSearch');
   const [optimizationMode, setOptimizationMode] = useState('speed');
 
-  // Update focusMode when URL template parameter changes
-  useEffect(() => {
-    const newFocusMode = templateParam || 'webSearch';
-    if (newFocusMode !== focusMode) {
-      setFocusMode(newFocusMode);
-    }
-  }, [templateParam, focusMode]);
-
   const [isMessagesLoaded, setIsMessagesLoaded] = useState(false);
-
   const [notFound, setNotFound] = useState(false);
+
+  // Update focusMode when URL template parameter changes, but only for new chats
+  useEffect(() => {
+    // Only update focus mode from URL if:
+    // 1. We're starting a new chat (newChatCreated) OR
+    // 2. Messages haven't been loaded yet (meaning we're not restoring from chat history)
+    if (newChatCreated || !isMessagesLoaded) {
+      const newFocusMode = templateParam || 'webSearch';
+      if (newFocusMode !== focusMode) {
+        setFocusMode(newFocusMode);
+      }
+    }
+  }, [templateParam, focusMode, newChatCreated, isMessagesLoaded]);
 
   useEffect(() => {
     checkConfig(

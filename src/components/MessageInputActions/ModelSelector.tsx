@@ -149,7 +149,7 @@ const ModelSelector = ({ className }: ModelSelectorProps) => {
         onClick={handleToggle}
         type="button"
         className={cn(
-          "flex items-center h-10 px-3 rounded-xl transition-all duration-200",
+          "flex items-center h-10 px-3 rounded-xl transition-all duration-200 min-w-[140px]",
           "text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white",
           "hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20",
           "group shadow-sm hover:shadow-md",
@@ -159,8 +159,8 @@ const ModelSelector = ({ className }: ModelSelectorProps) => {
         <div className="flex items-center justify-center w-6 h-6 rounded-lg group-hover:bg-white/50 dark:group-hover:bg-gray-800/50 transition-colors duration-200">
           <Icon size={16} />
         </div>
-        <span className="ml-2 text-sm font-medium">{selectedModelConfig?.displayName || 'Select Model'}</span>
-        <ChevronDown size={16} className="ml-1" />
+        <span className="ml-2 text-sm font-medium truncate">{selectedModelConfig?.displayName || 'Select Model'}</span>
+        <ChevronDown size={16} className="ml-1 flex-shrink-0" />
       </button>
 
       {isOpen && typeof window !== 'undefined' && createPortal(

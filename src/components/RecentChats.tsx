@@ -153,19 +153,23 @@ const RecentChats: React.FC<RecentChatsProps> = ({ focusMode, setFocusMode, onOp
         {chats.map((chat) => (
           <Link
             key={chat.id}
-            href={`/c/${chat.id}${focusMode !== 'webSearch' ? `?template=${focusMode}` : ''}`}
+            href={`/c/${chat.id}${chat.focusMode !== 'webSearch' ? `?template=${chat.focusMode}` : ''}`}
             className="group block"
           >
             <div className="flex items-center justify-between p-3 bg-white/80 dark:bg-gray-900/80 hover:bg-white dark:hover:bg-gray-900/95 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 hover:border-gray-300 dark:hover:border-gray-600 rounded-xl transition-all duration-300 hover:shadow-lg">
               <div className="flex items-center gap-3 flex-1 min-w-0">
-                {currentTemplate && (
-                  <div className="flex-shrink-0 text-blue-600 dark:text-blue-400 p-1.5 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg">
-                    {React.cloneElement(currentTemplate.icon as React.ReactElement, { 
-                      size: 16, 
-                      className: "stroke-[1.5]" 
-                    })}
-                  </div>
-                )}
+                {(() => {
+                  // Get the template for this specific chat
+                  const chatTemplate = allTemplates.find(template => template.key === chat.focusMode);
+                  return chatTemplate && (
+                    <div className="flex-shrink-0 text-blue-600 dark:text-blue-400 p-1.5 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg">
+                      {React.cloneElement(chatTemplate.icon as React.ReactElement, { 
+                        size: 16, 
+                        className: "stroke-[1.5]" 
+                      })}
+                    </div>
+                  );
+                })()}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-gray-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                     {chat.title}
