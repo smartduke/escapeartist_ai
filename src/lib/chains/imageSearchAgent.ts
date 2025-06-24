@@ -34,6 +34,7 @@ Rephrased question:
 type ImageSearchChainInput = {
   chat_history: BaseMessage[];
   query: string;
+  focusMode?: string;
 };
 
 interface ImageSearchResult {
@@ -44,7 +45,7 @@ interface ImageSearchResult {
 
 const strParser = new StringOutputParser();
 
-const createImageSearchChain = (llm: BaseChatModel) => {
+const createImageSearchChain = (llm: BaseChatModel, focusMode?: string) => {
   return RunnableSequence.from([
     RunnableMap.from({
       chat_history: (input: ImageSearchChainInput) => {
@@ -60,6 +61,11 @@ const createImageSearchChain = (llm: BaseChatModel) => {
     RunnableLambda.from(async (input: string) => {
       input = input.replace(/<think>.*?<\/think>/g, '');
 
+      // Add site restriction for Escape Artist search
+      if (focusMode === 'escapeArtistSearch') {
+        input = `site:escapeartist.com ${input}`;
+      }
+
       const res = await searchSearxng(input, {
         engines: ['bing images', 'google images'],
       });
@@ -68,11 +74,22 @@ const createImageSearchChain = (llm: BaseChatModel) => {
 
       res.results.forEach((result) => {
         if (result.img_src && result.url && result.title) {
-          images.push({
-            img_src: result.img_src,
-            url: result.url,
-            title: result.title,
-          });
+          // For Escape Artist search, filter results to only include escapeartist.com
+          if (focusMode === 'escapeArtistSearch') {
+            if (result.url && result.url.includes('escapeartist.com')) {
+              images.push({
+                img_src: result.img_src,
+                url: result.url,
+                title: result.title,
+              });
+            }
+          } else {
+            images.push({
+              img_src: result.img_src,
+              url: result.url,
+              title: result.title,
+            });
+          }
         }
       });
 
@@ -85,7 +102,7 @@ const handleImageSearch = (
   input: ImageSearchChainInput,
   llm: BaseChatModel,
 ) => {
-  const imageSearchChain = createImageSearchChain(llm);
+  const imageSearchChain = createImageSearchChain(llm, input.focusMode);
   return imageSearchChain.invoke(input);
 };
 

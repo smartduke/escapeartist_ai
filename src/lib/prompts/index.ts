@@ -88,6 +88,10 @@ import {
   dataAnalysisResponsePrompt,
   dataAnalysisRetrieverPrompt,
 } from './dataAnalysis';
+import {
+  escapeArtistSearchResponsePrompt,
+  escapeArtistSearchRetrieverPrompt,
+} from './escapeArtistSearch';
 
 export default {
   webSearchResponsePrompt,
@@ -137,4 +141,6 @@ export default {
   languageSearchRetrieverPrompt,
   dataAnalysisResponsePrompt,
   dataAnalysisRetrieverPrompt,
+  escapeArtistSearchResponsePrompt,
+  escapeArtistSearchRetrieverPrompt,
 };

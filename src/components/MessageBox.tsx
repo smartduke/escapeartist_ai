@@ -1515,6 +1515,7 @@ const MessageBox = ({
   isEditing,
   onEditStart,
   onEditEnd,
+  focusMode = 'webSearch',
 }: {
   message: Message;
   messageIndex: number;
@@ -1528,6 +1529,7 @@ const MessageBox = ({
   isEditing?: boolean;
   onEditStart?: () => void;
   onEditEnd?: () => void;
+  focusMode?: string;
 }) => {
   const { user, guestId } = useAuth();
   const [parsedMessage, setParsedMessage] = useState(message.content);
@@ -1884,6 +1886,7 @@ const MessageBox = ({
                   chatHistory={history.slice(0, messageIndex - 1)}
                   messageId={message.messageId}
                   autoLoad={true}
+                  focusMode={focusMode}
                 />
               </div>
             )}

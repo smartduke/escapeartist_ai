@@ -139,6 +139,22 @@ const templateCategories = [
         ]
       },
       {
+        key: 'escapeArtistSearch',
+        title: 'Escape Artist',
+        description: 'Offshore strategies & international living',
+        icon: <Plane size={16} className="stroke-[1.5]" />,
+        greeting: 'Your offshore strategy and international living expert!',
+        subtitle: 'I can help with offshore banking, expat lifestyle, tax optimization, and global mobility strategies.',
+        quickPrompts: [
+          'Best offshore banking jurisdictions',
+          'Countries with favorable tax policies for expats',
+          'How to obtain a second passport legally',
+          'Setting up an international business',
+          'Expat-friendly countries for retirement',
+          'Legal tax optimization strategies'
+        ]
+      },
+      {
         key: 'jobSearch',
         title: 'Jobs',
         description: 'Career and employment',

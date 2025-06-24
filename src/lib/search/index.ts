@@ -218,4 +218,13 @@ export const searchHandlers: Record<string, MetaSearchAgent> = {
     searchWeb: true,
     summarizer: false,
   }),
+  escapeArtistSearch: new MetaSearchAgent({
+    activeEngines: ['google'],
+    queryGeneratorPrompt: prompts.escapeArtistSearchRetrieverPrompt,
+    responsePrompt: prompts.escapeArtistSearchResponsePrompt,
+    rerank: true,
+    rerankThreshold: 0.5,
+    searchWeb: true,
+    summarizer: false,
+  }),
 };

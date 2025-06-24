@@ -18,11 +18,13 @@ const SearchImages = ({
   chatHistory,
   messageId,
   autoLoad = false,
+  focusMode = 'webSearch',
 }: {
   query: string;
   chatHistory: Message[];
   messageId: string;
   autoLoad?: boolean;
+  focusMode?: string;
 }) => {
   const [images, setImages] = useState<Image[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -49,6 +51,7 @@ const SearchImages = ({
       body: JSON.stringify({
         query: query,
         chatHistory: chatHistory,
+        focusMode: focusMode,
         chatModel: {
           provider: chatModelProvider,
           model: chatModel,

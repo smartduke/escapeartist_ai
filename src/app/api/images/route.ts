@@ -18,6 +18,7 @@ interface ImageSearchBody {
   query: string;
   chatHistory: any[];
   chatModel?: ChatModel;
+  focusMode?: string;
 }
 
 export const POST = async (req: Request) => {
@@ -68,6 +69,7 @@ export const POST = async (req: Request) => {
       {
         chat_history: chatHistory,
         query: body.query,
+        focusMode: body.focusMode || 'webSearch',
       },
       llm,
     );

@@ -799,6 +799,7 @@ const ChatWindow = ({ id }: { id?: string }) => {
               files={files}
               setFiles={setFiles}
               onMessageUpdate={handleMessageUpdate}
+              focusMode={focusMode}
             />
             
             {/* Blog Exports Panel */}

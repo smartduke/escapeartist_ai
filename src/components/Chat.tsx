@@ -19,6 +19,7 @@ const Chat = ({
   files,
   setFiles,
   onMessageUpdate,
+  focusMode = 'webSearch',
 }: {
   messages: Message[];
   sendMessage: (message: string) => void;
@@ -30,6 +31,7 @@ const Chat = ({
   files: File[];
   setFiles: (files: File[]) => void;
   onMessageUpdate?: (messageId: string, newContent: string) => void;
+  focusMode?: string;
 }) => {
   const { user } = useAuth();
   const [dividerWidth, setDividerWidth] = useState(0);
@@ -109,6 +111,7 @@ const Chat = ({
               isEditing={editingMessageId === msg.messageId}
               onEditStart={() => handleEditStart(msg.messageId)}
               onEditEnd={handleEditEnd}
+              focusMode={focusMode}
             />
             {!isLast && msg.role === 'assistant' && (
               <div className="flex items-center justify-center my-6">
