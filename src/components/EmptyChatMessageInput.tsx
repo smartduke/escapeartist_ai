@@ -5,6 +5,7 @@ import Focus, { allTemplates, FocusRef } from './MessageInputActions/Focus';
 import Optimization from './MessageInputActions/Optimization';
 import Attach from './MessageInputActions/Attach';
 import ModelSelector from './MessageInputActions/ModelSelector';
+import VoiceInput from './MessageInputActions/VoiceInput';
 import { File } from './ChatWindow';
 import { cn } from '@/lib/utils';
 
@@ -41,6 +42,10 @@ const EmptyChatMessageInput = ({
 
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const focusRef = useRef<FocusRef | null>(null);
+
+  const handleVoiceTranscript = (transcript: string) => {
+    setMessage(prev => prev + (prev ? ' ' : '') + transcript);
+  };
 
   // Generate dynamic placeholder text based on selected agent
   const getPlaceholderText = () => {
@@ -168,6 +173,7 @@ const EmptyChatMessageInput = ({
               setFiles={setFiles}
             />
             <ModelSelector />
+            <VoiceInput onTranscript={handleVoiceTranscript} />
             <button
               disabled={message.trim().length === 0}
               className={cn(
