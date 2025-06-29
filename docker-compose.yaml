@@ -1,4 +1,18 @@
 services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: dinakar
+      POSTGRES_PASSWORD: dina
+      POSTGRES_DB: ea_ai
+    ports:
+      - 5433:5432
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - perplexica-network
+    restart: unless-stopped
+
   searxng:
     image: docker.io/searxng/searxng:latest
     volumes:
@@ -19,15 +33,15 @@ services:
         - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
     environment:
       - SEARXNG_API_URL=http://searxng:8080
-      - DATA_DIR=/home/perplexica
+      - DATA_DIR=/home/EA-Agent
       - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
       - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
       # PostgreSQL Configuration
-      - DB_HOST=host.docker.internal
+      - DB_HOST=postgres
       - DB_PORT=5432
       - DB_USER=dinakar
       - DB_PASSWORD=dina
-      - DB_NAME=infoxaidb
+      - DB_NAME=ea_ai
       # Razorpay Configuration
       - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID}
       - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET}
@@ -61,8 +75,11 @@ services:
     networks:
       - perplexica-network
     volumes:
-      - uploads:/home/perplexica/uploads
+      - uploads:/home/EA-Agent/uploads
       - ./config.toml:/home/perplexica/config.toml
+    depends_on:
+      - postgres
+      - searxng
     restart: unless-stopped
 
 networks:
@@ -70,3 +87,4 @@ networks:
 
 volumes:
   uploads:
+  postgres_data:

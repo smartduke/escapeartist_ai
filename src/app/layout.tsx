@@ -1,34 +1,38 @@
 import type { Metadata } from 'next';
-import { Montserrat } from 'next/font/google';
+import { Montserrat, Poppins } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
-import Sidebar from '@/components/Sidebar';
-import { Toaster } from 'sonner';
 import ThemeProvider from '@/components/theme/Provider';
+import { Toaster } from 'sonner';
+import Sidebar from '@/components/Sidebar';
 import { AuthProvider } from '@/components/auth/AuthProvider';
 import { SidebarProvider } from '@/components/SidebarContext';
 
 const montserrat = Montserrat({
-  weight: ['300', '400', '500', '700'],
   subsets: ['latin'],
-  display: 'swap',
+  variable: '--font-montserrat',
   fallback: ['Arial', 'sans-serif'],
 });
 
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-poppins",
+});
+
 export const metadata: Metadata = {
-  title: 'Infoxai - AI-Powered Search Engine',
-  description:
-    'Infoxai is an intelligent AI search engine that provides deep insights and answers from the internet.',
+  title: 'EscapeArtist AI',
+  description: 'Your AI-powered travel companion',
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html className="h-full" lang="en" suppressHydrationWarning>
-      <body className={cn('h-full', montserrat.className)}>
+      <body className={cn('h-full', poppins.variable, 'font-poppins')}>
         <ThemeProvider>
           <AuthProvider>
             <SidebarProvider>

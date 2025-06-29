@@ -5,7 +5,7 @@ import { Document } from '@langchain/core/documents';
 import Navbar from './Navbar';
 import Chat from './Chat';
 import EmptyChat from './EmptyChat';
-import WeatherWidget from './WeatherWidget';
+
 import BlogExportsPanel from './BlogExportsPanel';
 import crypto from 'crypto';
 import { toast } from 'sonner';
@@ -304,7 +304,7 @@ const ChatWindow = ({ id }: { id?: string }) => {
   const [files, setFiles] = useState<File[]>([]);
   const [fileIds, setFileIds] = useState<string[]>([]);
 
-  const [focusMode, setFocusMode] = useState(templateParam || 'webSearch');
+  const [focusMode, setFocusMode] = useState(templateParam || 'escapeArtistSearch');
   const [optimizationMode, setOptimizationMode] = useState('speed');
 
   const [isMessagesLoaded, setIsMessagesLoaded] = useState(false);
@@ -316,7 +316,7 @@ const ChatWindow = ({ id }: { id?: string }) => {
     // 1. We're starting a new chat (newChatCreated) OR
     // 2. Messages haven't been loaded yet (meaning we're not restoring from chat history)
     if (newChatCreated || !isMessagesLoaded) {
-      const newFocusMode = templateParam || 'webSearch';
+      const newFocusMode = templateParam || 'escapeArtistSearch';
       if (newFocusMode !== focusMode) {
         setFocusMode(newFocusMode);
       }
@@ -473,7 +473,7 @@ const ChatWindow = ({ id }: { id?: string }) => {
           // Update URL without page refresh if we're starting a new chat from homepage
           // This happens after we get the first response, ensuring the chat exists
           if (newChatCreated && messages.length === 0) {
-            const templateParam = focusMode !== 'webSearch' ? `?template=${focusMode}` : '';
+            const templateParam = focusMode !== 'escapeArtistSearch' ? `?template=${focusMode}` : '';
             const newUrl = `/c/${chatId}${templateParam}`;
             window.history.replaceState(null, '', newUrl);
           }
@@ -499,7 +499,7 @@ const ChatWindow = ({ id }: { id?: string }) => {
           // Update URL without page refresh if we're starting a new chat from homepage
           // This happens after we get the first response, ensuring the chat exists
           if (newChatCreated && messages.length === 0) {
-            const templateParam = focusMode !== 'webSearch' ? `?template=${focusMode}` : '';
+            const templateParam = focusMode !== 'escapeArtistSearch' ? `?template=${focusMode}` : '';
             const newUrl = `/c/${chatId}${templateParam}`;
             window.history.replaceState(null, '', newUrl);
           }
@@ -693,10 +693,7 @@ const ChatWindow = ({ id }: { id?: string }) => {
 
   const rewrite = (messageId: string) => {
     const index = messages.findIndex((msg) => msg.messageId === messageId);
-
-    if (index === -1) return;
-
-    const message = messages[index - 1];
+    const message = messages[index];
 
     setMessages((prev) => {
       return [...prev.slice(0, messages.length > 2 ? index - 1 : 0)];
@@ -706,17 +703,6 @@ const ChatWindow = ({ id }: { id?: string }) => {
     });
 
     sendMessage(message.content, message.messageId);
-  };
-
-  const handleMessageUpdate = (messageId: string, newContent: string) => {
-    setMessages((prev) =>
-      prev.map((msg) => {
-        if (msg.messageId === messageId) {
-          return { ...msg, content: newContent };
-        }
-        return msg;
-      })
-    );
   };
 
   useEffect(() => {
@@ -802,7 +788,6 @@ const ChatWindow = ({ id }: { id?: string }) => {
               setFileIds={setFileIds}
               files={files}
               setFiles={setFiles}
-              onMessageUpdate={handleMessageUpdate}
               focusMode={focusMode}
             />
             
@@ -846,18 +831,6 @@ const ChatWindow = ({ id }: { id?: string }) => {
           </>
         ) : (
           <>
-            {/* Weather Widget - Desktop */}
-            <div className="hidden lg:block absolute top-8 right-8 z-50 max-w-sm">
-              <WeatherWidget />
-            </div>
-            
-            {/* Mobile Weather Widget */}
-            <div className="fixed top-0 left-0 right-0 lg:hidden bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl z-50 border-b border-gray-200/30 dark:border-gray-700/30">
-              <div className="max-w-screen-lg mx-auto px-4 py-3">
-                <WeatherWidget />
-              </div>
-            </div>
-            
             <EmptyChat
               sendMessage={sendMessage}
               focusMode={focusMode}

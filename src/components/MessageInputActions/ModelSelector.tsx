@@ -1,7 +1,9 @@
-import { useEffect, useState, useRef } from 'react';
-import { ChevronDown, Bot, Sparkles, Zap, BrainCircuit, Crown } from 'lucide-react';
+import React, { useEffect, useState, useRef } from 'react';
+import { Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createPortal } from 'react-dom';
+import { useAuth } from '@/components/auth/AuthProvider';
+import { useRouter } from 'next/navigation';
 
 // Brand Icons
 const OpenAIIcon = () => (
@@ -22,11 +24,16 @@ const AnthropicIcon = () => (
   </svg>
 );
 
-const GeminiIcon = () => (
+const BestIcon = () => (
   <svg viewBox="0 0 24 24" className="w-5 h-5">
     <path
       fill="currentColor"
-      d="M12 2L2 19h20L12 2zm0 4.19L18.74 17H5.26L12 6.19zm-1 6.06V16h2v-3.75h-2z"
+      d="M12 2C8.13 2 5 5.13 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.87-3.13-7-7-7zm-1 14v-2h2v2h-2zm1-4c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm-1 8h2v2h-2z"
+    />
+    <circle cx="12" cy="9" r="2" fill="currentColor" />
+    <path
+      fill="currentColor"
+      d="M7.5 9.5m-1.5 0a1.5 1.5 0 1 0 3 0 1.5 1.5 0 1 0-3 0M16.5 9.5m-1.5 0a1.5 1.5 0 1 0 3 0 1.5 1.5 0 1 0-3 0"
     />
   </svg>
 );
@@ -44,61 +51,104 @@ const PRIMARY_MODELS = [
   {
     key: 'gpt-4o-mini',
     provider: 'openai',
-    displayName: 'GPT-4o Mini',
-    description: 'Fast & efficient',
+    displayName: 'Best',
+    description: 'Optimized for quick, accurate responses',
     plan: 'Free',
-    icon: OpenAIIcon
+    icon: Bot
   },
   {
     key: 'gpt-4.1',
     provider: 'openai',
     displayName: 'GPT-4.1',
-    description: 'Most capable',
+    description: 'Advanced analysis & complex tasks',
     plan: 'Pro',
     icon: OpenAIIcon
   },
   {
     key: 'claude-sonnet-4-20250514',
     provider: 'anthropic',
-    displayName: 'Claude Sonnet',
-    description: 'Balanced performance',
+    displayName: 'Claude 4 Sonnet',
+    description: 'Expert in research & reasoning',
     plan: 'Pro',
     icon: AnthropicIcon
-  },
-  {
-    key: 'gemini-2.5-pro',
-    provider: 'google',
-    displayName: 'Gemini Pro',
-    description: 'Advanced reasoning',
-    plan: 'Pro',
-    icon: BrainCircuit
   }
 ];
 
 const ModelSelector = ({ className }: ModelSelectorProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [providers, setProviders] = useState<Record<string, Record<string, ModelProvider>>>({});
-  const [selectedProvider, setSelectedProvider] = useState<string>('');
-  const [selectedModel, setSelectedModel] = useState<string>('');
-  const [loading, setLoading] = useState(true);
+  const [selectedModel, setSelectedModel] = useState<string>('gpt-4o-mini');
   const [dropdownPosition, setDropdownPosition] = useState<'up' | 'down'>('down');
   const [dropdownCoords, setDropdownCoords] = useState({ x: 0, y: 0, width: 0 });
+  const [subscription, setSubscription] = useState<{ plan: string } | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const router = useRouter();
+  const { user } = useAuth();
 
   useEffect(() => {
     const loadSelectedModel = () => {
       const savedModel = localStorage.getItem('chatModel') || 'gpt-4o-mini';
-      setSelectedModel(savedModel);
+      // Validate that the saved model exists in our configuration
+      if (PRIMARY_MODELS.some(model => model.key === savedModel)) {
+        setSelectedModel(savedModel);
+      } else {
+        // If saved model is invalid, reset to default
+        setSelectedModel('gpt-4o-mini');
+        localStorage.setItem('chatModel', 'gpt-4o-mini');
+      }
     };
 
     loadSelectedModel();
-    setLoading(false);
   }, []);
 
-  const handleModelSelect = (model: string) => {
+  // Fetch subscription status when user changes
+  useEffect(() => {
+    const fetchSubscription = async () => {
+      if (!user) {
+        setSubscription(null);
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/subscriptions', {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setSubscription(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch subscription:', error);
+      }
+    };
+
+    fetchSubscription();
+  }, [user]);
+
+  const handleModelSelect = async (model: string) => {
     // Find the selected model config
     const modelConfig = PRIMARY_MODELS.find(m => m.key === model);
     if (!modelConfig) return;
+
+    // Check if model requires pro plan
+    if (modelConfig.plan === 'Pro') {
+      if (!user) {
+        router.push('/pricing');
+        setIsOpen(false);
+        return;
+      }
+
+      const isPro = subscription?.plan && subscription.plan !== 'free';
+      if (!isPro) {
+        router.push('/pricing');
+        setIsOpen(false);
+        return;
+      }
+    }
 
     // Store both model name and provider
     localStorage.setItem('chatModel', modelConfig.key);
@@ -139,28 +189,33 @@ const ModelSelector = ({ className }: ModelSelectorProps) => {
     setIsOpen(!isOpen);
   };
 
-  const selectedModelConfig = PRIMARY_MODELS.find(model => model.key === selectedModel);
-  const Icon = selectedModelConfig?.icon || Bot;
+  // Get the selected model configuration
+  const selectedModelConfig = PRIMARY_MODELS.find(model => model.key === selectedModel) || PRIMARY_MODELS[0];
+  const Icon = selectedModelConfig.icon;
+  const isBasicModel = selectedModel === 'gpt-4o-mini';
 
   return (
     <>
       <button
         ref={buttonRef}
         onClick={handleToggle}
+        disabled={false}
         type="button"
         className={cn(
-          "flex items-center h-10 px-3 rounded-xl transition-all duration-200 min-w-[140px]",
-          "text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white",
-          "hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20",
-          "group shadow-sm hover:shadow-md",
-          className
+          "transition-colors duration-200 whitespace-nowrap",
+          selectedModel === 'gpt-4o-mini'
+            ? "p-2 rounded-full"
+            : "flex items-center gap-2 px-2.5 py-2 rounded-xl",
+          isOpen
+            ? 'bg-gray-100 dark:bg-gray-800 text-black dark:text-white'
+            : 'text-black/70 dark:text-white/70 hover:bg-light-secondary dark:hover:bg-dark-secondary hover:text-black dark:hover:text-white'
         )}
+        title={selectedModelConfig.displayName}
       >
-        <div className="flex items-center justify-center w-6 h-6 rounded-lg group-hover:bg-white/50 dark:group-hover:bg-gray-800/50 transition-colors duration-200">
-          <Icon size={16} />
-        </div>
-        <span className="ml-2 text-sm font-medium truncate">{selectedModelConfig?.displayName || 'Select Model'}</span>
-        <ChevronDown size={16} className="ml-1 flex-shrink-0" />
+        {React.createElement(selectedModelConfig.icon, { size: 18 })}
+        {selectedModel !== 'gpt-4o-mini' && (
+          <span className="text-sm font-medium truncate">{selectedModelConfig.displayName}</span>
+        )}
       </button>
 
       {isOpen && typeof window !== 'undefined' && createPortal(
@@ -168,11 +223,7 @@ const ModelSelector = ({ className }: ModelSelectorProps) => {
           {/* Backdrop */}
           <div 
             className="fixed inset-0 z-[99998]" 
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setIsOpen(false);
-            }} 
+            onClick={() => setIsOpen(false)} 
           />
           
           {/* Dropdown */}
@@ -180,7 +231,7 @@ const ModelSelector = ({ className }: ModelSelectorProps) => {
             className={cn(
               "fixed bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl",
               "border border-gray-200/40 dark:border-gray-700/40 rounded-2xl",
-              "shadow-2xl z-[99999] overflow-hidden w-64",
+              "shadow-2xl z-[99999] overflow-hidden w-72",
               dropdownPosition === 'down' ? "mt-2" : "mb-2"
             )}
             style={{
@@ -188,46 +239,45 @@ const ModelSelector = ({ className }: ModelSelectorProps) => {
               top: dropdownPosition === 'down' ? dropdownCoords.y : undefined,
               bottom: dropdownPosition === 'up' ? window.innerHeight - dropdownCoords.y : undefined,
             }}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
+            onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-2">
+            <div className="p-1.5">
               {PRIMARY_MODELS.map((model) => {
                 const ModelIcon = model.icon;
+                const isPro = model.plan === 'Pro';
+                const isSelected = selectedModel === model.key;
                 return (
                   <button
                     key={model.key}
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleModelSelect(model.key);
-                    }}
+                    onClick={() => handleModelSelect(model.key)}
                     className={cn(
-                      "flex items-center w-full p-3 rounded-xl transition-all duration-200 group",
-                      "hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20",
-                      selectedModel === model.key
-                        ? "bg-gradient-to-r from-blue-100/80 to-purple-100/80 dark:from-blue-900/30 dark:to-purple-900/30 text-gray-900 dark:text-white"
-                        : "text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                      "w-full flex items-center space-x-3 px-2.5 py-2 rounded-xl transition-all duration-200",
+                      isSelected
+                        ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+                        : "hover:bg-gray-50 dark:hover:bg-gray-800/50 text-gray-700 dark:text-gray-300"
                     )}
                   >
-                    <div className="flex items-center justify-center w-8 h-8 rounded-lg group-hover:bg-white/50 dark:group-hover:bg-gray-800/50 transition-colors duration-200">
-                      <ModelIcon size={18} />
+                    <div className="flex-shrink-0">
+                      <ModelIcon />
                     </div>
-                    <div className="ml-3 text-left">
-                      <div className="text-sm font-medium">{model.displayName}</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                        {model.description}
-                        {model.plan === 'Pro' && (
-                          <>
-                            <span className="text-gray-400 dark:text-gray-500">•</span>
-                            <span className="text-blue-600 dark:text-blue-400 font-medium">Pro</span>
-                          </>
+                    <div className="flex-1 text-left min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium truncate">{model.displayName}</span>
+                        {isPro && (
+                          <span className="flex-shrink-0 text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/40 px-1.5 py-0.5 rounded">
+                            PRO
+                          </span>
                         )}
                       </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+                        {model.description}
+                      </div>
                     </div>
+                    {isSelected && (
+                      <div className="flex-shrink-0 text-blue-600 dark:text-blue-400">
+                        <div className="w-1.5 h-1.5 rounded-full bg-current" />
+                      </div>
+                    )}
                   </button>
                 );
               })}

@@ -18,7 +18,7 @@ const SearchImages = ({
   chatHistory,
   messageId,
   autoLoad = false,
-  focusMode = 'webSearch',
+  focusMode = 'escapeArtistSearch',
 }: {
   query: string;
   chatHistory: Message[];

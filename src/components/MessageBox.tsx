@@ -286,127 +286,6 @@ const exportMessageAsPDF = async (message: Message, userMessage?: Message) => {
   }
 };
 
-const convertMarkdownToHtml = (markdown: string): string => {
-  if (!markdown) return '';
-  
-  let html = markdown;
-  
-  // Remove think tags
-  html = html.replace(/<think>[\s\S]*?<\/think>/g, '');
-  
-  // Split into lines for better processing
-  let lines = html.split('\n');
-  let processedLines: string[] = [];
-  let inCodeBlock = false;
-  let inList = false;
-  let currentListItems: string[] = [];
-  
-  for (let i = 0; i < lines.length; i++) {
-    let line = lines[i];
-    const trimmedLine = line.trim();
-    
-    // Handle code blocks
-    if (trimmedLine.startsWith('```')) {
-      if (inCodeBlock) {
-        processedLines.push('</code></pre>');
-        inCodeBlock = false;
-      } else {
-        processedLines.push('<pre><code>');
-        inCodeBlock = true;
-      }
-      continue;
-    }
-    
-    if (inCodeBlock) {
-      processedLines.push(line);
-      continue;
-    }
-    
-    // Handle headers (order matters - longest first)
-    if (trimmedLine.match(/^#{1,6}\s/)) {
-      // Close any open lists
-      if (inList && currentListItems.length > 0) {
-        processedLines.push('<ul>');
-        processedLines.push(...currentListItems);
-        processedLines.push('</ul>');
-        currentListItems = [];
-        inList = false;
-      }
-      
-      const headerMatch = trimmedLine.match(/^(#{1,6})\s(.+)$/);
-      if (headerMatch) {
-        const level = headerMatch[1].length;
-        const text = headerMatch[2];
-        processedLines.push(`<h${level}>${text}</h${level}>`);
-        continue;
-      }
-    }
-    
-    // Handle unordered lists
-    if (trimmedLine.match(/^[\*\-\+]\s/)) {
-      const listItem = trimmedLine.replace(/^[\*\-\+]\s/, '');
-      currentListItems.push(`<li>${listItem}</li>`);
-      inList = true;
-      continue;
-    }
-    
-    // Handle ordered lists
-    if (trimmedLine.match(/^\d+\.\s/)) {
-      const listItem = trimmedLine.replace(/^\d+\.\s/, '');
-      currentListItems.push(`<li>${listItem}</li>`);
-      inList = true;
-      continue;
-    }
-    
-    // Close list if we're not in a list item anymore
-    if (inList && !trimmedLine.match(/^[\*\-\+\d+\.]\s/) && trimmedLine !== '') {
-      processedLines.push('<ul>');
-      processedLines.push(...currentListItems);
-      processedLines.push('</ul>');
-      currentListItems = [];
-      inList = false;
-    }
-    
-    // Handle empty lines
-    if (trimmedLine === '') {
-      processedLines.push('');
-      continue;
-    }
-    
-    // Convert inline formatting
-    line = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-    line = line.replace(/(?<!\*)\*([^\*]+)\*(?!\*)/g, '<em>$1</em>');
-    line = line.replace(/`([^`]+)`/g, '<code>$1</code>');
-    line = line.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
-    
-    // Remove citation numbers
-    line = line.replace(/\[\d+\]/g, '');
-    
-    // Wrap in paragraph if it's regular text
-    if (trimmedLine && !trimmedLine.match(/^<[h1-6]>/)) {
-      processedLines.push(`<p>${line.trim()}</p>`);
-    } else {
-      processedLines.push(line);
-    }
-  }
-  
-  // Close any remaining list
-  if (inList && currentListItems.length > 0) {
-    processedLines.push('<ul>');
-    processedLines.push(...currentListItems);
-    processedLines.push('</ul>');
-  }
-  
-  html = processedLines.join('\n');
-  
-  // Clean up extra whitespace and empty paragraphs
-  html = html.replace(/\n\s*\n/g, '\n');
-  html = html.replace(/<p><\/p>/g, '');
-  html = html.replace(/<p>\s*<\/p>/g, '');
-  
-  return html.trim();
-};
-
 const exportMessageAsBlogPost = async (message: Message, userMessage?: Message, currentChatModel?: any, user?: any, guestId?: string) => {
   try {
     // Show loading state
@@ -1502,6 +1381,127 @@ const exportMessageAsWord = async (message: Message, userMessage?: Message) => {
   }
 };
 
+const convertMarkdownToHtml = (markdown: string): string => {
+  if (!markdown) return '';
+  
+  let html = markdown;
+  
+  // Remove think tags
+  html = html.replace(/<think>[\s\S]*?<\/think>/g, '');
+  
+  // Split into lines for better processing
+  let lines = html.split('\n');
+  let processedLines: string[] = [];
+  let inCodeBlock = false;
+  let inList = false;
+  let currentListItems: string[] = [];
+  
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i];
+    const trimmedLine = line.trim();
+    
+    // Handle code blocks
+    if (trimmedLine.startsWith('```')) {
+      if (inCodeBlock) {
+        processedLines.push('</code></pre>');
+        inCodeBlock = false;
+      } else {
+        processedLines.push('<pre><code>');
+        inCodeBlock = true;
+      }
+      continue;
+    }
+    
+    if (inCodeBlock) {
+      processedLines.push(line);
+      continue;
+    }
+    
+    // Handle headers (order matters - longest first)
+    if (trimmedLine.match(/^#{1,6}\s/)) {
+      // Close any open lists
+      if (inList && currentListItems.length > 0) {
+        processedLines.push('<ul>');
+        processedLines.push(...currentListItems);
+        processedLines.push('</ul>');
+        currentListItems = [];
+        inList = false;
+      }
+      
+      const headerMatch = trimmedLine.match(/^(#{1,6})\s(.+)$/);
+      if (headerMatch) {
+        const level = headerMatch[1].length;
+        const text = headerMatch[2];
+        processedLines.push(`<h${level}>${text}</h${level}>`);
+        continue;
+      }
+    }
+    
+    // Handle unordered lists
+    if (trimmedLine.match(/^[\*\-\+]\s/)) {
+      const listItem = trimmedLine.replace(/^[\*\-\+]\s/, '');
+      currentListItems.push(`<li>${listItem}</li>`);
+      inList = true;
+      continue;
+    }
+    
+    // Handle ordered lists
+    if (trimmedLine.match(/^\d+\.\s/)) {
+      const listItem = trimmedLine.replace(/^\d+\.\s/, '');
+      currentListItems.push(`<li>${listItem}</li>`);
+      inList = true;
+      continue;
+    }
+    
+    // Close list if we're not in a list item anymore
+    if (inList && !trimmedLine.match(/^[\*\-\+\d+\.]\s/) && trimmedLine !== '') {
+      processedLines.push('<ul>');
+      processedLines.push(...currentListItems);
+      processedLines.push('</ul>');
+      currentListItems = [];
+      inList = false;
+    }
+    
+    // Handle empty lines
+    if (trimmedLine === '') {
+      processedLines.push('');
+      continue;
+    }
+    
+    // Convert inline formatting
+    line = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    line = line.replace(/(?<!\*)\*([^\*]+)\*(?!\*)/g, '<em>$1</em>');
+    line = line.replace(/`([^`]+)`/g, '<code>$1</code>');
+    line = line.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+    
+    // Remove citation numbers
+    line = line.replace(/\[\d+\]/g, '');
+    
+    // Wrap in paragraph if it's regular text
+    if (trimmedLine && !trimmedLine.match(/^<[h1-6]>/)) {
+      processedLines.push(`<p>${line.trim()}</p>`);
+    } else {
+      processedLines.push(line);
+    }
+  }
+  
+  // Close any remaining list
+  if (inList && currentListItems.length > 0) {
+    processedLines.push('<ul>');
+    processedLines.push(...currentListItems);
+    processedLines.push('</ul>');
+  }
+  
+  html = processedLines.join('\n');
+  
+  // Clean up extra whitespace and empty paragraphs
+  html = html.replace(/\n\s*\n/g, '\n');
+  html = html.replace(/<p><\/p>/g, '');
+  html = html.replace(/<p>\s*<\/p>/g, '');
+  
+  return html.trim();
+};
+
 const MessageBox = ({
   message,
   messageIndex,
@@ -1511,11 +1511,7 @@ const MessageBox = ({
   isLast,
   rewrite,
   sendMessage,
-  onMessageUpdate,
-  isEditing,
-  onEditStart,
-  onEditEnd,
-  focusMode = 'webSearch',
+  focusMode = 'escapeArtistSearch',
 }: {
   message: Message;
   messageIndex: number;
@@ -1525,10 +1521,6 @@ const MessageBox = ({
   isLast: boolean;
   rewrite: (messageId: string) => void;
   sendMessage: (message: string) => void;
-  onMessageUpdate?: (messageId: string, newContent: string) => void;
-  isEditing?: boolean;
-  onEditStart?: () => void;
-  onEditEnd?: () => void;
   focusMode?: string;
 }) => {
   const { user, guestId } = useAuth();
@@ -1654,7 +1646,6 @@ const MessageBox = ({
               ref={tabNavRef}
               className={cn(
                 "bg-light-primary dark:bg-dark-primary border-b border-light-200 dark:border-dark-200 mb-6",
-                isEditing ? "" : "sticky top-16 z-10"
               )}>
               <nav className="flex space-x-8">
                 <button
@@ -1728,45 +1719,23 @@ const MessageBox = ({
                 )}
                 
                 <div className="flex flex-col space-y-2">
-                  {isEditing && onMessageUpdate ? (
-                    <RichTextEditor
-                      messageId={message.messageId}
-                      initialContent={message.content}
-                      onUpdate={onMessageUpdate}
-                      onEditStart={onEditStart}
-                      onEditEnd={onEditEnd}
-                      message={message}
-                      history={history}
-                    />
-                  ) : (
-                    <Markdown
-                      className={cn(
-                        'prose prose-h1:mb-3 prose-h2:mb-2 prose-h2:mt-6 prose-h2:font-[800] prose-h3:mt-4 prose-h3:mb-1.5 prose-h3:font-[600] dark:prose-invert prose-p:leading-relaxed prose-pre:p-0 font-[400]',
-                        'max-w-none break-words text-black dark:text-white',
-                      )}
-                      options={markdownOverrides}
-                    >
-                      {parsedMessage}
-                    </Markdown>
-                  )}
+                  <Markdown
+                    className={cn(
+                      'prose prose-h1:mb-3 prose-h2:mb-2 prose-h2:mt-6 prose-h2:font-[800] prose-h3:mt-4 prose-h3:mb-1.5 prose-h3:font-[600] dark:prose-invert prose-p:leading-relaxed prose-pre:p-0 font-[400]',
+                      'max-w-none break-words text-black dark:text-white',
+                    )}
+                    options={markdownOverrides}
+                  >
+                    {parsedMessage}
+                  </Markdown>
                   
                   {loading && isLast ? null : (
                     <div className="flex flex-row items-center justify-between w-full text-black dark:text-white py-4 -mx-2">
                       <div className="flex flex-row items-center space-x-1">
                         <Rewrite rewrite={rewrite} messageId={message.messageId} />
-                        {onEditStart && !isEditing && (
-                          <button
-                            onClick={onEditStart}
-                            className="py-2 px-3 text-black/70 dark:text-white/70 rounded-xl hover:bg-light-secondary dark:hover:bg-dark-secondary transition duration-200 hover:text-black dark:hover:text-white flex flex-row items-center space-x-1"
-                            title="Edit message"
-                          >
-                            <Edit3 size={18} />
-                            <p className="text-xs font-medium">Edit</p>
-                          </button>
-                        )}
                       </div>
                       <div className="flex flex-row items-center space-x-1">
-                        <Copy initialMessage={message.content} message={message} />
+                        <Copy message={message} initialMessage={message.content} />
                         <button
                           onClick={() => {
                             if (speechStatus === 'started') {
@@ -1821,13 +1790,7 @@ const MessageBox = ({
                                   <File size={17} className="text-[#24A0ED]" />
                                   Export as Word
                                 </button>
-                                <button
-                                  className="flex items-center gap-2 px-4 py-2 text-left hover:bg-light-secondary dark:hover:bg-dark-primary transition-colors text-black dark:text-white rounded-lg font-medium"
-                                  onClick={() => exportMessageAsBlogPost(message, message.role === 'assistant' && messageIndex > 0 ? history[messageIndex - 1] : undefined, undefined, user, guestId)}
-                                >
-                                  <PenTool size={17} className="text-[#24A0ED]" />
-                                  Export as Blog Post
-                                </button>
+                             
                               </div>
                             </PopoverPanel>
                           </Transition>
@@ -1845,7 +1808,7 @@ const MessageBox = ({
                         <div className="h-px w-full bg-light-secondary dark:bg-dark-secondary" />
                         <div className="flex flex-col space-y-3 text-black dark:text-white">
                           <div className="flex flex-row items-center space-x-2 mt-4">
-                            <Layers3 />
+                            <Compass />
                             <h3 className="text-xl font-medium">Related</h3>
                           </div>
                           <div className="flex flex-col space-y-3">

@@ -94,7 +94,7 @@ const Page = () => {
               key={i}
             >
               <Link
-                href={`/c/${chat.id}${chat.focusMode !== 'webSearch' ? `?template=${chat.focusMode}` : ''}`}
+                href={`/c/${chat.id}${chat.focusMode !== 'escapeArtistSearch' ? `?template=${chat.focusMode}` : ''}`}
                 className="text-black dark:text-white lg:text-xl font-medium truncate transition duration-200 hover:text-[#24A0ED] dark:hover:text-[#24A0ED] cursor-pointer"
               >
                 {chat.title}

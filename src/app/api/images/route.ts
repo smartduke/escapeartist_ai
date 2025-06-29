@@ -69,7 +69,7 @@ export const POST = async (req: Request) => {
       {
         chat_history: chatHistory,
         query: body.query,
-        focusMode: body.focusMode || 'webSearch',
+        focusMode: body.focusMode || 'escapeArtistSearch',
       },
       llm,
     );

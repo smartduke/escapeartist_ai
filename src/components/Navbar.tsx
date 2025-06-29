@@ -968,12 +968,12 @@ const Navbar = ({
 
   // Get current template info
   const currentTemplate = allTemplates.find(template => template.key === focusMode);
-  const templateName = currentTemplate?.title || 'All Sources';
+  const templateName = currentTemplate?.title || 'Escape Artist';
 
   const handleTemplateClick = () => {
     // Navigate to homepage with template selected
-    const url = focusMode && focusMode !== 'webSearch' 
-      ? `/?template=${focusMode}` 
+      const url = focusMode && focusMode !== 'escapeArtistSearch'
+    ? `/?template=${focusMode}` 
       : '/';
     window.location.href = url;
   };

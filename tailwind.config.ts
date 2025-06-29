@@ -45,6 +45,10 @@ const config: Config = {
           },
         };
       },
+      fontFamily: {
+        montserrat: ["var(--font-montserrat)"],
+        poppins: ["var(--font-poppins)"],
+      },
     },
   },
   plugins: [require('@tailwindcss/typography')],
