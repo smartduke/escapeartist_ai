@@ -877,7 +877,7 @@ const ChatWindow = ({ id }: { id?: string }) => {
           <div className="absolute inset-0 w-12 h-12 border-4 border-transparent border-t-blue-500 rounded-full animate-spin opacity-20"></div>
         </div>
         <p className="text-gray-600 dark:text-gray-400 text-sm font-medium animate-pulse">
-          Initializing Infoxai...
+                        Initializing EscapeArtist AI...
         </p>
       </div>
     </div>

@@ -1,4 +1,4 @@
-# 🚀 Infoxai - Premium AI Search Engine
+# 🚀 EscapeArtist AI - Premium AI Search Engine
 
 <div align="center">
   <h3>🔍 Intelligent Search • 🤖 AI-Powered • ⚡ Lightning Fast</h3>
@@ -7,7 +7,7 @@
 
 ## 🌟 Overview
 
-**Infoxai** is a next-generation AI-powered search engine that revolutionizes how you discover and interact with information. Unlike traditional search engines, Infoxai understands context, provides comprehensive answers, and cites reliable sources - all powered by advanced AI technology.
+**EscapeArtist AI** is a next-generation AI-powered search engine that revolutionizes how you discover and interact with information. Unlike traditional search engines, EscapeArtist AI understands context, provides comprehensive answers, and cites reliable sources - all powered by advanced AI technology.
 
 ## ✨ Key Features
 
@@ -37,7 +37,7 @@
 ```bash
 # Clone and setup
 git clone [your-repo]
-cd infoxai
+cd escapeartist-ai
 
 # Install dependencies
 npm install
@@ -152,7 +152,7 @@ SEARXNG_API_URL=your_searxng_endpoint
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🌟 **Why Choose Infoxai?**
+## 🌟 **Why Choose EscapeArtist AI?**
 
 ✅ **Advanced AI** - Latest language models  
 ✅ **Real-time Data** - Always current information  
@@ -164,6 +164,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 <div align="center">
-  <p><strong>Transform your search experience with Infoxai</strong></p>
+  <p><strong>Transform your search experience with EscapeArtist AI</strong></p>
   <p><em>Intelligent • Accurate • Fast</em></p>
 </div>

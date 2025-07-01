@@ -115,7 +115,7 @@ export default function SubscriptionPage() {
         key: key,
         amount: amount,
         currency: currency,
-        name: 'InfoxAI',
+        name: 'EscapeArtist AI',
         description: `${planId === 'pro_monthly' ? 'Monthly' : 'Yearly'} Pro Plan`,
         order_id: orderId,
         handler: async (response: any) => {

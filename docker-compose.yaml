@@ -24,7 +24,7 @@ services:
     restart: unless-stopped
 
   app:
-    image: infoxai/app:latest
+    image: escapeartist-ai/app:latest
     build:
       context: .
       dockerfile: app.dockerfile

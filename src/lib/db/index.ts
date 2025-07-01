@@ -7,7 +7,7 @@ const pool = new Pool({
   port: parseInt(process.env.DB_PORT || '5432'),
   user: process.env.DB_USER || 'dinakar',
   password: process.env.DB_PASSWORD || 'dina',
-  database: process.env.DB_NAME || 'infoxaidb',
+  database: process.env.DB_NAME || 'ea_ai',
   ssl: false,
   max: 20,
   idleTimeoutMillis: 30000,

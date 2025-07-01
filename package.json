@@ -1,8 +1,8 @@
 {
-  "name": "infoxai",
+  "name": "escapeartist-ai",
   "version": "1.0.0",
   "license": "MIT",
-  "author": "Infoxai Team",
+  "author": "EscapeArtist AI Team",
   "scripts": {
     "dev": "next dev",
     "build": "npm run db:push && next build",

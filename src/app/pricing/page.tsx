@@ -145,7 +145,7 @@ export default function PricingPage() {
         key: data.key,
         amount: data.amount,
         currency: data.currency,
-        name: 'InfoxAI',
+        name: 'EscapeArtist AI',
         description: `${planId === 'pro_monthly' ? 'Monthly' : 'Yearly'} Pro Plan`,
         order_id: data.orderId,
         handler: async (response: any) => {

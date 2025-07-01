@@ -3,8 +3,8 @@ import { Metadata } from 'next';
 import { Suspense } from 'react';
 
 export const metadata: Metadata = {
-  title: 'Chat - Infoxai',
-  description: 'Chat with the internet using Infoxai\'s AI-powered search.',
+      title: 'Chat - EscapeArtist AI',
+    description: 'Chat with the internet using EscapeArtist AI\'s advanced AI-powered search.',
 };
 
 const Home = () => {
