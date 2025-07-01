@@ -4,8 +4,9 @@ import { subscriptions, users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { getServerUserFromRequest } from '@/lib/supabase/server';
 import Razorpay from 'razorpay';
+import Stripe from 'stripe';
 
-// Initialize Razorpay only if credentials are available
+// Initialize payment gateways
 let razorpay: Razorpay | null = null;
 if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
   razorpay = new Razorpay({
@@ -14,10 +15,20 @@ if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
   });
 }
 
+let stripe: Stripe | null = null;
+if (process.env.STRIPE_SECRET_KEY) {
+  try {
+    stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: '2025-05-28.basil',
+    });
+  } catch (error) {
+    console.error('Failed to initialize Stripe:', error);
+  }
+}
+
 // Helper function to ensure user exists in database
 async function ensureUserExists(user: any) {
   try {
-    // Check if user already exists
     const existingUser = await db
       .select()
       .from(users)
@@ -25,17 +36,12 @@ async function ensureUserExists(user: any) {
       .limit(1);
 
     if (existingUser.length === 0) {
-      // Create user if doesn't exist
-      console.log('Creating user record for:', user.id);
       await db.insert(users).values({
         id: user.id,
         email: user.email || '',
         name: user.name,
         isGuest: false,
       });
-      console.log('User record created successfully');
-    } else {
-      console.log('User record already exists');
     }
   } catch (error) {
     console.error('Error ensuring user exists:', error);
@@ -45,20 +51,12 @@ async function ensureUserExists(user: any) {
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('GET /api/subscriptions: Starting request');
-    
     const user = await getServerUserFromRequest(request);
-    console.log('GET /api/subscriptions: User result:', user);
-    
     if (!user) {
-      console.log('GET /api/subscriptions: No user found, returning 401');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Ensure user exists in database
     await ensureUserExists(user);
-
-    console.log('GET /api/subscriptions: Fetching subscription for user:', user.id);
     
     const subscription = await db
       .select()
@@ -67,7 +65,6 @@ export async function GET(request: NextRequest) {
       .limit(1);
 
     if (subscription.length === 0) {
-      console.log('GET /api/subscriptions: No subscription found, returning free plan');
       return NextResponse.json({
         plan: 'free',
         status: 'active',
@@ -76,12 +73,11 @@ export async function GET(request: NextRequest) {
     }
 
     const sub = subscription[0];
-    console.log('GET /api/subscriptions: Found subscription:', sub);
-    
     return NextResponse.json({
       plan: sub.plan,
       status: sub.status,
       currentPeriodEnd: sub.currentPeriodEnd,
+      paymentGateway: sub.paymentGateway,
     });
   } catch (error) {
     console.error('GET /api/subscriptions: Error:', error);
@@ -94,29 +90,16 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('POST /api/subscriptions: Starting request');
-    
     const user = await getServerUserFromRequest(request);
-    console.log('POST /api/subscriptions: User result:', user);
-    
     if (!user) {
-      console.log('POST /api/subscriptions: No user found, returning 401');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!razorpay) {
-      console.log('POST /api/subscriptions: Razorpay not configured');
-      return NextResponse.json({ error: 'Payment service not configured' }, { status: 503 });
-    }
-
-    // Ensure user exists in database
     await ensureUserExists(user);
 
-    const { plan } = await request.json();
-    console.log('POST /api/subscriptions: Plan requested:', plan);
+    const { plan, paymentGateway = 'stripe' } = await request.json();
 
     if (plan === 'free') {
-      // Handle downgrade to free
       const now = new Date();
       await db
         .update(subscriptions)
@@ -124,6 +107,8 @@ export async function POST(request: NextRequest) {
           plan: 'free',
           status: 'active',
           razorpaySubscriptionId: null,
+          stripeSubscriptionId: null,
+          paymentGateway: null,
           currentPeriodStart: now,
           currentPeriodEnd: now,
         })
@@ -132,13 +117,99 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
-    // Create Razorpay order
+    // Get plan amount
     const amount = plan === 'pro_monthly' ? 2000 : 19200; // $20 and $16*12 in cents
     const currency = 'USD';
-    
-    console.log('POST /api/subscriptions: Creating Razorpay order with amount:', amount);
 
-    try {
+    if (paymentGateway === 'stripe') {
+      if (!stripe || !process.env.STRIPE_MONTHLY_PRICE_ID || !process.env.STRIPE_YEARLY_PRICE_ID) {
+        return NextResponse.json(
+          { error: 'Stripe not configured' },
+          { status: 503 }
+        );
+      }
+
+      // Create or get Stripe customer
+      let customer;
+      const customers = await stripe.customers.list({
+        email: user.email,
+        limit: 1,
+      });
+
+      if (customers.data.length > 0) {
+        customer = customers.data[0];
+      } else {
+        customer = await stripe.customers.create({
+          email: user.email,
+          metadata: {
+            userId: user.id,
+          },
+        });
+      }
+
+      // Create subscription
+      const subscription = await stripe.subscriptions.create({
+        customer: customer.id,
+        items: [
+          {
+            price: plan === 'pro_monthly'
+              ? process.env.STRIPE_MONTHLY_PRICE_ID
+              : process.env.STRIPE_YEARLY_PRICE_ID,
+          },
+        ],
+        payment_behavior: 'default_incomplete',
+        expand: ['latest_invoice.payment_intent'],
+        metadata: {
+          userId: user.id,
+          plan,
+        },
+      });
+
+      const invoice = subscription.latest_invoice as Stripe.Invoice;
+      const paymentIntent = (invoice as any).payment_intent as Stripe.PaymentIntent;
+
+      // Store the subscription as pending
+      const now = new Date();
+      const currentPeriodEnd = new Date(now);
+      if (plan === 'pro_monthly') {
+        currentPeriodEnd.setMonth(now.getMonth() + 1);
+      } else {
+        currentPeriodEnd.setFullYear(now.getFullYear() + 1);
+      }
+
+      await db.insert(subscriptions).values({
+        userId: user.id,
+        plan: plan as 'pro_monthly' | 'pro_yearly',
+        status: 'pending',
+        stripeSubscriptionId: subscription.id,
+        paymentGateway: 'stripe',
+        currentPeriodStart: now,
+        currentPeriodEnd,
+      }).onConflictDoUpdate({
+        target: [subscriptions.userId],
+        set: {
+          plan: plan as 'pro_monthly' | 'pro_yearly',
+          status: 'pending',
+          stripeSubscriptionId: subscription.id,
+          paymentGateway: 'stripe',
+          currentPeriodStart: now,
+          currentPeriodEnd,
+        },
+      });
+
+      return NextResponse.json({
+        subscriptionId: subscription.id,
+        clientSecret: paymentIntent.client_secret,
+      });
+
+    } else if (paymentGateway === 'razorpay') {
+      if (!razorpay) {
+        return NextResponse.json(
+          { error: 'Razorpay not configured' },
+          { status: 503 }
+        );
+      }
+
       const order = await razorpay.orders.create({
         amount: amount,
         currency: currency,
@@ -149,62 +220,46 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      console.log('POST /api/subscriptions: Razorpay order created:', order.id);
-
-      // Calculate period end based on plan
       const now = new Date();
       const currentPeriodEnd = new Date(now);
       if (plan === 'pro_monthly') {
         currentPeriodEnd.setMonth(now.getMonth() + 1);
-      } else if (plan === 'pro_yearly') {
+      } else {
         currentPeriodEnd.setFullYear(now.getFullYear() + 1);
       }
 
-      // Store the subscription as pending until payment is confirmed
-      const existingSubscription = await db
-        .select()
-        .from(subscriptions)
-        .where(eq(subscriptions.userId, user.id))
-        .limit(1);
-
-      if (existingSubscription.length > 0) {
-        await db
-          .update(subscriptions)
-          .set({
-            plan,
-            status: 'pending',
-            razorpaySubscriptionId: order.id,
-            currentPeriodStart: now,
-            currentPeriodEnd,
-          })
-          .where(eq(subscriptions.userId, user.id));
-      } else {
-        await db.insert(subscriptions).values({
-          userId: user.id,
-          plan,
+      await db.insert(subscriptions).values({
+        userId: user.id,
+        plan: plan as 'pro_monthly' | 'pro_yearly',
+        status: 'pending',
+        razorpaySubscriptionId: order.id,
+        paymentGateway: 'razorpay',
+        currentPeriodStart: now,
+        currentPeriodEnd,
+      }).onConflictDoUpdate({
+        target: [subscriptions.userId],
+        set: {
+          plan: plan as 'pro_monthly' | 'pro_yearly',
           status: 'pending',
           razorpaySubscriptionId: order.id,
+          paymentGateway: 'razorpay',
           currentPeriodStart: now,
           currentPeriodEnd,
-        });
-      }
+        },
+      });
 
-      console.log('POST /api/subscriptions: Subscription created with pending status');
-      
       return NextResponse.json({
         orderId: order.id,
         amount: order.amount,
         currency: order.currency,
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
       });
-
-    } catch (razorpayError) {
-      console.error('POST /api/subscriptions: Razorpay error:', razorpayError);
-      return NextResponse.json(
-        { error: 'Failed to create payment order' },
-        { status: 500 }
-      );
     }
+
+    return NextResponse.json(
+      { error: 'Invalid payment gateway' },
+      { status: 400 }
+    );
 
   } catch (error) {
     console.error('POST /api/subscriptions: Error:', error);
