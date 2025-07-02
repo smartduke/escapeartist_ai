@@ -24,6 +24,9 @@ export default function SubscriptionPage() {
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'plans' | 'usage'>('plans');
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [processingPayment, setProcessingPayment] = useState(false);
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
 
   // Debug logging
   console.log('SubscriptionPage: user =', user, 'isLoading =', isLoading);
@@ -89,12 +92,37 @@ export default function SubscriptionPage() {
     }
 
     if (planId === 'free') {
-      // Handle downgrade to free plan
-      toast.success('You are now on the free plan');
-      await fetchSubscription();
+      try {
+        const response = await fetch('/api/subscriptions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ plan: 'free' }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to update subscription');
+        }
+
+        toast.success('You are now on the free plan');
+        await fetchSubscription();
+      } catch (error) {
+        console.error('Error updating to free plan:', error);
+        toast.error('Failed to update subscription');
+      }
       return;
     }
 
+    setSelectedPlanId(planId);
+    setShowPaymentForm(true);
+  };
+
+  const handlePaymentSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!selectedPlanId || processingPayment) return;
+
+    setProcessingPayment(true);
     try {
       // Create subscription/order
       const response = await fetch('/api/subscriptions', {
@@ -102,7 +130,7 @@ export default function SubscriptionPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ plan: planId }),
+        body: JSON.stringify({ plan: selectedPlanId }),
       });
 
       if (!response.ok) {
@@ -113,25 +141,53 @@ export default function SubscriptionPage() {
 
       // Initialize Stripe payment
       if (typeof window.Stripe === 'undefined') {
-        toast.error('Payment service not available. Please refresh the page.');
-        return;
+        throw new Error('Payment service not available');
       }
 
+      let stripe;
       try {
         const publishableKey = getStripePublishableKey();
-        const stripe = window.Stripe(publishableKey);
+        stripe = window.Stripe(publishableKey);
       } catch (error) {
-        console.error('Failed to initialize Stripe:', error);
-        toast.error('Payment configuration error');
-        return;
+        throw new Error('Payment configuration error');
       }
-      
-      // For now, redirect to pricing page for proper Stripe checkout
-      toast.info('Redirecting to secure checkout...');
-      window.location.href = '/pricing';
+
+      // Create payment element
+      const elements = stripe.elements();
+      const card = elements.create('card');
+      const cardElement = document.getElementById('card-element');
+      if (!cardElement) {
+        throw new Error('Card element not found');
+      }
+      card.mount('#card-element');
+
+      // Confirm payment
+      const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(
+        clientSecret,
+        {
+          payment_method: {
+            card,
+            billing_details: {
+              name: user?.name || '',
+              email: user?.email || '',
+            },
+          },
+        }
+      );
+
+      if (stripeError) {
+        throw new Error(stripeError.message);
+      }
+
+      toast.success('Payment successful! Your subscription is now active.');
+      await fetchSubscription();
+      setShowPaymentForm(false);
+      setSelectedPlanId(null);
     } catch (error) {
-      console.error('Subscription error:', error);
-      toast.error('Failed to create subscription');
+      console.error('Payment error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to process payment');
+    } finally {
+      setProcessingPayment(false);
     }
   };
 
@@ -243,6 +299,47 @@ export default function SubscriptionPage() {
                   </p>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Payment Form Modal */}
+        {showPaymentForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-md w-full">
+              <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
+                Enter Payment Details
+              </h3>
+              <form onSubmit={handlePaymentSubmit}>
+                <div className="mb-4">
+                  <div id="card-element" className="p-4 border rounded-lg bg-gray-50 dark:bg-gray-700">
+                    {/* Stripe Card Element will be mounted here */}
+                  </div>
+                  <div id="card-errors" role="alert" className="text-red-500 text-sm mt-2"></div>
+                </div>
+                <div className="flex space-x-3">
+                  <button
+                    type="submit"
+                    disabled={processingPayment}
+                    className={`flex-1 py-2 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors ${
+                      processingPayment ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                  >
+                    {processingPayment ? 'Processing...' : 'Pay Now'}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={processingPayment}
+                    onClick={() => {
+                      setShowPaymentForm(false);
+                      setSelectedPlanId(null);
+                    }}
+                    className="py-2 px-4 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}
