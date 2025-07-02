@@ -508,8 +508,9 @@ class MetaSearchAgent implements MetaSearchAgentType {
     emitter: eventEmitter,
   ) {
     let buffer = '';
-    const CHUNK_SIZE = 80; // Increased chunk size to reduce JSON parsing overhead
-    
+    const CHUNK_SIZE = 4; // Number of characters to accumulate before sending
+    const STREAM_DELAY = 10; // Milliseconds between chunks
+
     for await (const event of stream) {
       if (
         event.event === 'on_chain_end' &&
@@ -519,7 +520,7 @@ class MetaSearchAgent implements MetaSearchAgentType {
         console.log(`[MetaSearchAgent] Emitting ${this.currentSources.length} sources`);
         emitter.emit(
           'data',
-          JSON.stringify({ type: 'sources', data: this.currentSources }) + '\n'
+          JSON.stringify({ type: 'sources', data: this.currentSources }),
         );
       }
       if (
@@ -534,11 +535,12 @@ class MetaSearchAgent implements MetaSearchAgentType {
           const chunk = buffer.slice(0, CHUNK_SIZE);
           buffer = buffer.slice(CHUNK_SIZE);
           
-          // Ensure we send a complete JSON message with newline delimiter
+          // Emit the chunk and wait a small delay
           emitter.emit(
             'data',
-            JSON.stringify({ type: 'response', data: chunk }) + '\n'
+            JSON.stringify({ type: 'response', data: chunk })
           );
+          await new Promise(resolve => setTimeout(resolve, STREAM_DELAY));
         }
       }
       if (
@@ -549,7 +551,7 @@ class MetaSearchAgent implements MetaSearchAgentType {
         if (buffer.length > 0) {
           emitter.emit(
             'data',
-            JSON.stringify({ type: 'response', data: buffer }) + '\n'
+            JSON.stringify({ type: 'response', data: buffer })
           );
         }
         emitter.emit('end');
