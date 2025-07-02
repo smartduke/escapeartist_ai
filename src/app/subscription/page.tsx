@@ -5,6 +5,7 @@ import { useAuth } from '@/components/auth/AuthProvider';
 import { SubscriptionPlans } from '@/components/subscription/SubscriptionPlans';
 import { UsageDashboard } from '@/components/subscription/UsageDashboard';
 import { toast } from 'sonner';
+import { getStripePublishableKey } from '@/lib/stripe/config';
 
 declare global {
   interface Window {
@@ -116,7 +117,14 @@ export default function SubscriptionPage() {
         return;
       }
 
-      const stripe = window.Stripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
+      try {
+        const publishableKey = getStripePublishableKey();
+        const stripe = window.Stripe(publishableKey);
+      } catch (error) {
+        console.error('Failed to initialize Stripe:', error);
+        toast.error('Payment configuration error');
+        return;
+      }
       
       // For now, redirect to pricing page for proper Stripe checkout
       toast.info('Redirecting to secure checkout...');

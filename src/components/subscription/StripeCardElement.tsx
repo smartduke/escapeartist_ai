@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { getStripePublishableKey } from '@/lib/stripe/config';
 
 declare global {
   interface Window {
@@ -32,8 +33,16 @@ export default function StripeCardElement({ onReady }: StripeCardElementProps) {
   }, []);
 
   const initializeStripe = () => {
-    const stripeInstance = window.Stripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
-    setStripe(stripeInstance);
+    let stripeInstance;
+    try {
+      const publishableKey = getStripePublishableKey();
+      stripeInstance = window.Stripe(publishableKey);
+      setStripe(stripeInstance);
+    } catch (error) {
+      console.error('Failed to initialize Stripe:', error);
+      toast.error('Payment configuration error');
+      return;
+    }
 
     const elementsInstance = stripeInstance.elements();
     setElements(elementsInstance);
