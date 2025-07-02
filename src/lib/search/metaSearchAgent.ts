@@ -507,6 +507,9 @@ class MetaSearchAgent implements MetaSearchAgentType {
     stream: AsyncGenerator<StreamEvent, any, any>,
     emitter: eventEmitter,
   ) {
+    let buffer = '';
+    const CHUNK_SIZE = 80; // Increased chunk size to reduce JSON parsing overhead
+    
     for await (const event of stream) {
       if (
         event.event === 'on_chain_end' &&
@@ -516,22 +519,39 @@ class MetaSearchAgent implements MetaSearchAgentType {
         console.log(`[MetaSearchAgent] Emitting ${this.currentSources.length} sources`);
         emitter.emit(
           'data',
-          JSON.stringify({ type: 'sources', data: this.currentSources }),
+          JSON.stringify({ type: 'sources', data: this.currentSources }) + '\n'
         );
       }
       if (
         event.event === 'on_chain_stream' &&
         event.name === 'FinalResponseGenerator'
       ) {
-        emitter.emit(
-          'data',
-          JSON.stringify({ type: 'response', data: event.data.chunk }),
-        );
+        // Accumulate the chunk in the buffer
+        buffer += event.data.chunk;
+        
+        // If we have enough characters, emit them
+        while (buffer.length >= CHUNK_SIZE) {
+          const chunk = buffer.slice(0, CHUNK_SIZE);
+          buffer = buffer.slice(CHUNK_SIZE);
+          
+          // Ensure we send a complete JSON message with newline delimiter
+          emitter.emit(
+            'data',
+            JSON.stringify({ type: 'response', data: chunk }) + '\n'
+          );
+        }
       }
       if (
         event.event === 'on_chain_end' &&
         event.name === 'FinalResponseGenerator'
       ) {
+        // Emit any remaining buffer content
+        if (buffer.length > 0) {
+          emitter.emit(
+            'data',
+            JSON.stringify({ type: 'response', data: buffer }) + '\n'
+          );
+        }
         emitter.emit('end');
       }
     }

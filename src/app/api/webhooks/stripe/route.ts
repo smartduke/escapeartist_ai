@@ -90,22 +90,38 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   }
 
   try {
-    await db.insert(subscriptions).values({
-      userId,
+    // Check if subscription exists
+    const existingSubscription = await db
+      .select()
+      .from(subscriptions)
+      .where(eq(subscriptions.userId, userId))
+      .limit(1);
+
+    const status = subscription.status === 'active' ? 'active' as const : 'pending' as const;
+    const subscriptionData = {
       plan,
-      status: subscription.status === 'active' ? 'active' : 'pending',
+      status,
       stripeSubscriptionId: subscription.id,
-      paymentGateway: 'stripe',
+      paymentGateway: 'stripe' as const,
       currentPeriodStart,
       currentPeriodEnd,
-    }).onConflictDoUpdate({
-      target: subscriptions.stripeSubscriptionId,
-      set: {
-        status: subscription.status === 'active' ? 'active' : 'pending',
-        currentPeriodStart,
-        currentPeriodEnd,
-      },
-    });
+    };
+
+    if (existingSubscription.length > 0) {
+      // Update existing subscription
+      await db
+        .update(subscriptions)
+        .set(subscriptionData)
+        .where(eq(subscriptions.userId, userId));
+    } else {
+      // Insert new subscription
+      await db
+        .insert(subscriptions)
+        .values({
+          userId,
+          ...subscriptionData,
+        });
+    }
   } catch (error) {
     console.error('Failed to update subscription in database:', error);
     throw error;

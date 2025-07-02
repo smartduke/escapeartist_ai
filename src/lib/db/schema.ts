@@ -37,11 +37,11 @@ export const chats = pgTable('chats', {
 
 export const subscriptions = pgTable('subscriptions', {
   id: serial('id').primaryKey(),
-  userId: text('userId').notNull().references(() => users.id),
+  userId: text('userId').notNull().references(() => users.id).unique(),
   plan: text('plan', { enum: ['free', 'pro_monthly', 'pro_yearly'] }).notNull(),
   status: text('status', { enum: ['active', 'inactive', 'canceled', 'past_due', 'pending'] }).notNull(),
   razorpaySubscriptionId: text('razorpaySubscriptionId'),
-  stripeSubscriptionId: text('stripeSubscriptionId'),
+  stripeSubscriptionId: text('stripeSubscriptionId').unique(),
   paymentGateway: text('paymentGateway', { enum: ['stripe'] }),
   currentPeriodStart: timestamp('currentPeriodStart').notNull(),
   currentPeriodEnd: timestamp('currentPeriodEnd').notNull(),
