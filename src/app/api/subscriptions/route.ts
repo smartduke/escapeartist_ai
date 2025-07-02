@@ -133,7 +133,21 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Create subscription
+    // Create a payment intent first
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: plan === 'pro_monthly' ? 2000 : 19200, // $20/month or $192/year (16/month)
+      currency: 'usd',
+      customer: customer.id,
+      metadata: {
+        userId: user.id,
+        plan,
+      },
+      automatic_payment_methods: {
+        enabled: true,
+      },
+    });
+
+    // Create subscription with the payment intent
     const subscription = await stripe.subscriptions.create({
       customer: customer.id,
       items: [
@@ -144,15 +158,17 @@ export async function POST(request: NextRequest) {
         },
       ],
       payment_behavior: 'default_incomplete',
-      expand: ['latest_invoice.payment_intent'],
+      payment_settings: {
+        payment_method_types: ['card'],
+        save_default_payment_method: 'on_subscription',
+      },
       metadata: {
         userId: user.id,
         plan,
+        paymentIntentId: paymentIntent.id,
       },
+      expand: ['latest_invoice.payment_intent'],
     });
-
-    const invoice = subscription.latest_invoice as Stripe.Invoice;
-    const paymentIntent = (invoice as any).payment_intent as Stripe.PaymentIntent;
 
     // Store the subscription as pending
     const now = new Date();

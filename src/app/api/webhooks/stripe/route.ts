@@ -48,6 +48,25 @@ export async function POST(request: NextRequest) {
       case 'customer.subscription.deleted':
         await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
         break;
+      case 'payment_intent.created':
+        await handlePaymentIntentCreated(event.data.object as Stripe.PaymentIntent);
+        break;
+      case 'payment_intent.succeeded':
+        await handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent);
+        break;
+      case 'payment_intent.payment_failed':
+        await handlePaymentIntentFailed(event.data.object as Stripe.PaymentIntent);
+        break;
+      case 'invoice.created':
+      case 'invoice.finalized':
+        await handleInvoiceUpdated(event.data.object as Stripe.Invoice);
+        break;
+      case 'invoice.payment_succeeded':
+        await handleInvoicePaymentSucceeded(event.data.object as Stripe.Invoice);
+        break;
+      case 'invoice.payment_failed':
+        await handleInvoicePaymentFailed(event.data.object as Stripe.Invoice);
+        break;
       default:
         console.log('Unhandled webhook event:', event.type);
     }
@@ -100,6 +119,100 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
       .where(eq(subscriptions.stripeSubscriptionId, subscription.id));
   } catch (error) {
     console.error('Failed to mark subscription as canceled:', error);
+    throw error;
+  }
+}
+
+async function handlePaymentIntentCreated(paymentIntent: Stripe.PaymentIntent) {
+  // Log for monitoring
+  console.log('Payment intent created:', paymentIntent.id);
+}
+
+async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent) {
+  const userId = paymentIntent.metadata?.userId;
+  if (!userId) {
+    console.error('Missing userId in payment intent metadata:', paymentIntent.id);
+    return;
+  }
+
+  try {
+    // Update subscription status if this was for a subscription
+    const subscription = await db
+      .select()
+      .from(subscriptions)
+      .where(eq(subscriptions.userId, userId))
+      .limit(1);
+
+    if (subscription.length > 0) {
+      await db.update(subscriptions)
+        .set({ status: 'active' })
+        .where(eq(subscriptions.userId, userId));
+    }
+  } catch (error) {
+    console.error('Failed to handle payment intent success:', error);
+    throw error;
+  }
+}
+
+async function handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent) {
+  const userId = paymentIntent.metadata?.userId;
+  if (!userId) {
+    console.error('Missing userId in payment intent metadata:', paymentIntent.id);
+    return;
+  }
+
+  try {
+    // Update subscription status if this was for a subscription
+    const subscription = await db
+      .select()
+      .from(subscriptions)
+      .where(eq(subscriptions.userId, userId))
+      .limit(1);
+
+    if (subscription.length > 0) {
+      await db.update(subscriptions)
+        .set({ status: 'past_due' })
+        .where(eq(subscriptions.userId, userId));
+    }
+  } catch (error) {
+    console.error('Failed to handle payment intent failure:', error);
+    throw error;
+  }
+}
+
+async function handleInvoiceUpdated(invoice: Stripe.Invoice) {
+  // Log for monitoring
+  console.log('Invoice updated:', invoice.id, 'Status:', invoice.status);
+}
+
+async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
+  const subscriptionId = (invoice as any).subscription;
+  if (!subscriptionId) {
+    return; // Not a subscription invoice
+  }
+
+  try {
+    await db.update(subscriptions)
+      .set({ status: 'active' })
+      .where(eq(subscriptions.stripeSubscriptionId, subscriptionId));
+  } catch (error) {
+    console.error('Failed to handle invoice payment success:', error);
+    throw error;
+  }
+}
+
+async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
+  const subscriptionId = (invoice as any).subscription;
+  if (!subscriptionId) {
+    return; // Not a subscription invoice
+  }
+
+  try {
+    await db.update(subscriptions)
+      .set({ status: 'past_due' })
+      .where(eq(subscriptions.stripeSubscriptionId, subscriptionId));
+  } catch (error) {
+    console.error('Failed to handle invoice payment failure:', error);
     throw error;
   }
 } 
