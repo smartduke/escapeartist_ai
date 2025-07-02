@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 
 declare global {
   interface Window {
-    Razorpay: any;
+    Stripe: any;
   }
 }
 
@@ -42,9 +42,9 @@ export default function SubscriptionPage() {
   }, [user, isLoading]);
 
   useEffect(() => {
-    // Load Razorpay script
+    // Load Stripe script
     const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.src = 'https://js.stripe.com/v3/';
     script.async = true;
     document.body.appendChild(script);
 
@@ -108,44 +108,19 @@ export default function SubscriptionPage() {
         throw new Error('Failed to create subscription');
       }
 
-      const { orderId, amount, currency, key } = await response.json();
+      const { subscriptionId, clientSecret } = await response.json();
 
-      // Initialize Razorpay payment
-      const options = {
-        key: key,
-        amount: amount,
-        currency: currency,
-        name: 'EscapeArtist AI',
-        description: `${planId === 'pro_monthly' ? 'Monthly' : 'Yearly'} Pro Plan`,
-        order_id: orderId,
-        handler: async (response: any) => {
-          // Payment successful
-          console.log('Payment successful:', response);
-          toast.success('Payment successful! Your subscription is now active.');
-          await fetchSubscription();
-        },
-        prefill: {
-          name: user.name || '',
-          email: user.email || '',
-        },
-        theme: {
-          color: '#3B82F6',
-        },
-        modal: {
-          ondismiss: () => {
-            toast.error('Payment cancelled');
-          },
-        },
-      };
-
-      // Check if Razorpay is loaded
-      if (typeof window.Razorpay === 'undefined') {
+      // Initialize Stripe payment
+      if (typeof window.Stripe === 'undefined') {
         toast.error('Payment service not available. Please refresh the page.');
         return;
       }
 
-      const razorpay = new window.Razorpay(options);
-      razorpay.open();
+      const stripe = window.Stripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
+      
+      // For now, redirect to pricing page for proper Stripe checkout
+      toast.info('Redirecting to secure checkout...');
+      window.location.href = '/pricing';
     } catch (error) {
       console.error('Subscription error:', error);
       toast.error('Failed to create subscription');

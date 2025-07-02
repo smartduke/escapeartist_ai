@@ -59,41 +59,61 @@ const createImageSearchChain = (llm: BaseChatModel, focusMode?: string) => {
     llm,
     strParser,
     RunnableLambda.from(async (input: string) => {
-      input = input.replace(/<think>.*?<\/think>/g, '');
+      try {
+        input = input.replace(/<think>.*?<\/think>/g, '').trim();
 
-      // Add site restriction for Escape Artist search
-      if (focusMode === 'escapeArtistSearch') {
-        input = `site:escapeartist.com ${input}`;
-      }
+        console.log(`Image search query: "${input}" with focus mode: ${focusMode}`);
 
-      const res = await searchSearxng(input, {
-        engines: ['bing images', 'google images'],
-      });
+        // Only search escapeartist.com for images
+        let searchQueries = [`${input} site:escapeartist.com`];
 
-      const images: ImageSearchResult[] = [];
+        const images: ImageSearchResult[] = [];
 
-      res.results.forEach((result) => {
-        if (result.img_src && result.url && result.title) {
-          // For Escape Artist search, filter results to only include escapeartist.com
-          if (focusMode === 'escapeArtistSearch') {
-            if (result.url && result.url.includes('escapeartist.com')) {
-              images.push({
-                img_src: result.img_src,
-                url: result.url,
-                title: result.title,
-              });
-            }
-          } else {
-            images.push({
-              img_src: result.img_src,
-              url: result.url,
-              title: result.title,
+        for (const searchQuery of searchQueries) {
+          if (images.length >= 10) break;
+
+          try {
+            const res = await searchSearxng(searchQuery, {
+              engines: ['bing images', 'google images'],
+              language: 'en',
             });
+
+            console.log(`Search "${searchQuery}" returned ${res.results.length} results`);
+
+            res.results.forEach((result) => {
+              if (images.length >= 10) return;
+
+              // More flexible validation - allow items with img_src or thumbnail
+              const imageUrl = result.img_src || result.thumbnail_src || result.thumbnail;
+              const sourceUrl = result.url;
+              const title = result.title || 'Untitled Image';
+
+              if (imageUrl && sourceUrl) {
+                // Only include escapeartist.com images
+                if (sourceUrl.includes('escapeartist.com')) {
+                  images.push({
+                    img_src: imageUrl,
+                    url: sourceUrl,
+                    title: title,
+                  });
+                }
+              }
+            });
+
+            // Since we only search escapeartist.com, no need to break early
+          } catch (searchError) {
+            console.error(`Failed to search with query "${searchQuery}":`, searchError);
+            continue;
           }
         }
-      });
 
-      return images.slice(0, 10);
+        console.log(`Final image results: ${images.length} images found`);
+        return images.slice(0, 10);
+
+      } catch (error) {
+        console.error('Image search failed:', error);
+        return []; // Return empty array instead of throwing
+      }
     }),
   ]);
 };

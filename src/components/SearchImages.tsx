@@ -37,48 +37,79 @@ const SearchImages = ({
     
     setLoading(true);
 
-    const chatModelProvider = localStorage.getItem('chatModelProvider');
-    const chatModel = localStorage.getItem('chatModel');
+    try {
+      const chatModelProvider = localStorage.getItem('chatModelProvider');
+      const chatModel = localStorage.getItem('chatModel');
 
-    const customOpenAIBaseURL = localStorage.getItem('openAIBaseURL');
-    const customOpenAIKey = localStorage.getItem('openAIApiKey');
+      const customOpenAIBaseURL = localStorage.getItem('openAIBaseURL');
+      const customOpenAIKey = localStorage.getItem('openAIApiKey');
 
-    const res = await fetch(`/api/images`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        query: query,
-        chatHistory: chatHistory,
-        focusMode: focusMode,
-        chatModel: {
-          provider: chatModelProvider,
-          model: chatModel,
-          ...(chatModelProvider === 'custom_openai' && {
-            customOpenAIBaseURL: customOpenAIBaseURL,
-            customOpenAIKey: customOpenAIKey,
-          }),
+      console.log(`Loading images for query: "${query}" with focus mode: ${focusMode}`);
+
+      const res = await fetch(`/api/images`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-      }),
-    });
+        body: JSON.stringify({
+          query: query,
+          chatHistory: chatHistory,
+          focusMode: focusMode,
+          chatModel: {
+            provider: chatModelProvider,
+            model: chatModel,
+            ...(chatModelProvider === 'custom_openai' && {
+              customOpenAIBaseURL: customOpenAIBaseURL,
+              customOpenAIKey: customOpenAIKey,
+            }),
+          },
+        }),
+      });
 
-    const data = await res.json();
+      if (!res.ok) {
+        console.error(`Image search API error: ${res.status} ${res.statusText}`);
+        const errorData = await res.text();
+        console.error('Error details:', errorData);
+        setImages([]);
+        return;
+      }
 
-    const images = data.images ?? [];
-    setImages(images);
-    setSlides(
-      images.map((image: Image, index: number) => {
-        return {
-          src: image.img_src,
-          title: image.title,
-          description: `${image.title} - Source: ${new URL(image.url).hostname}`,
-          url: image.url,
-          index: index,
-        };
-      }),
-    );
-    setLoading(false);
+      const data = await res.json();
+      console.log(`Received ${data.images?.length || 0} images from API`);
+
+      const images = data.images ?? [];
+      setImages(images);
+      
+      if (images.length > 0) {
+        setSlides(
+          images.map((image: Image, index: number) => {
+            try {
+              return {
+                src: image.img_src,
+                title: image.title,
+                description: `${image.title} - Source: ${new URL(image.url).hostname}`,
+                url: image.url,
+                index: index,
+              };
+            } catch (urlError) {
+              console.warn('Invalid URL for image:', image.url);
+              return {
+                src: image.img_src,
+                title: image.title,
+                description: `${image.title} - Source: ${image.url}`,
+                url: image.url,
+                index: index,
+              };
+            }
+          }),
+        );
+      }
+    } catch (error) {
+      console.error('Failed to load images:', error);
+      setImages([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -129,6 +160,11 @@ const SearchImages = ({
                 src={image.img_src}
                 alt={image.title}
                 className="h-full w-full aspect-video object-cover rounded-lg transition duration-200 active:scale-95 hover:scale-[1.02] cursor-zoom-in"
+                onError={(e) => {
+                  console.warn('Failed to load image:', image.img_src);
+                  // Hide broken images
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
               />
             ))}
           </div>
@@ -164,6 +200,23 @@ const SearchImages = ({
             }}
           />
         </>
+      )}
+      {images !== null && images.length === 0 && !loading && (
+        <div className="flex flex-col items-center justify-center py-8 text-center">
+          <ImagesIcon size={48} className="text-gray-400 dark:text-gray-600 mb-4" />
+          <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">
+            No images found for your query
+          </p>
+          <p className="text-gray-500 dark:text-gray-500 text-xs">
+            Try refining your search terms or using different keywords
+          </p>
+          <button
+            onClick={loadImages}
+            className="mt-4 px-4 py-2 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
       )}
     </>
   );

@@ -3,18 +3,9 @@ import db from '@/lib/db';
 import { subscriptions, users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { getServerUserFromRequest } from '@/lib/supabase/server';
-import Razorpay from 'razorpay';
 import Stripe from 'stripe';
 
-// Initialize payment gateways
-let razorpay: Razorpay | null = null;
-if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
-  razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_KEY_SECRET,
-  });
-}
-
+// Initialize Stripe
 let stripe: Stripe | null = null;
 if (process.env.STRIPE_SECRET_KEY) {
   try {
@@ -97,7 +88,7 @@ export async function POST(request: NextRequest) {
 
     await ensureUserExists(user);
 
-    const { plan, paymentGateway = 'stripe' } = await request.json();
+    const { plan } = await request.json();
 
     if (plan === 'free') {
       const now = new Date();
@@ -117,149 +108,85 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
-    // Get plan amount
-    const amount = plan === 'pro_monthly' ? 2000 : 19200; // $20 and $16*12 in cents
-    const currency = 'USD';
+    if (!stripe || !process.env.STRIPE_MONTHLY_PRICE_ID || !process.env.STRIPE_YEARLY_PRICE_ID) {
+      return NextResponse.json(
+        { error: 'Stripe not configured' },
+        { status: 503 }
+      );
+    }
 
-    if (paymentGateway === 'stripe') {
-      if (!stripe || !process.env.STRIPE_MONTHLY_PRICE_ID || !process.env.STRIPE_YEARLY_PRICE_ID) {
-        return NextResponse.json(
-          { error: 'Stripe not configured' },
-          { status: 503 }
-        );
-      }
+    // Create or get Stripe customer
+    let customer;
+    const customers = await stripe.customers.list({
+      email: user.email,
+      limit: 1,
+    });
 
-      // Create or get Stripe customer
-      let customer;
-      const customers = await stripe.customers.list({
+    if (customers.data.length > 0) {
+      customer = customers.data[0];
+    } else {
+      customer = await stripe.customers.create({
         email: user.email,
-        limit: 1,
-      });
-
-      if (customers.data.length > 0) {
-        customer = customers.data[0];
-      } else {
-        customer = await stripe.customers.create({
-          email: user.email,
-          metadata: {
-            userId: user.id,
-          },
-        });
-      }
-
-      // Create subscription
-      const subscription = await stripe.subscriptions.create({
-        customer: customer.id,
-        items: [
-          {
-            price: plan === 'pro_monthly'
-              ? process.env.STRIPE_MONTHLY_PRICE_ID
-              : process.env.STRIPE_YEARLY_PRICE_ID,
-          },
-        ],
-        payment_behavior: 'default_incomplete',
-        expand: ['latest_invoice.payment_intent'],
         metadata: {
           userId: user.id,
-          plan,
         },
       });
+    }
 
-      const invoice = subscription.latest_invoice as Stripe.Invoice;
-      const paymentIntent = (invoice as any).payment_intent as Stripe.PaymentIntent;
-
-      // Store the subscription as pending
-      const now = new Date();
-      const currentPeriodEnd = new Date(now);
-      if (plan === 'pro_monthly') {
-        currentPeriodEnd.setMonth(now.getMonth() + 1);
-      } else {
-        currentPeriodEnd.setFullYear(now.getFullYear() + 1);
-      }
-
-      await db.insert(subscriptions).values({
+    // Create subscription
+    const subscription = await stripe.subscriptions.create({
+      customer: customer.id,
+      items: [
+        {
+          price: plan === 'pro_monthly'
+            ? process.env.STRIPE_MONTHLY_PRICE_ID
+            : process.env.STRIPE_YEARLY_PRICE_ID,
+        },
+      ],
+      payment_behavior: 'default_incomplete',
+      expand: ['latest_invoice.payment_intent'],
+      metadata: {
         userId: user.id,
+        plan,
+      },
+    });
+
+    const invoice = subscription.latest_invoice as Stripe.Invoice;
+    const paymentIntent = (invoice as any).payment_intent as Stripe.PaymentIntent;
+
+    // Store the subscription as pending
+    const now = new Date();
+    const currentPeriodEnd = new Date(now);
+    if (plan === 'pro_monthly') {
+      currentPeriodEnd.setMonth(now.getMonth() + 1);
+    } else {
+      currentPeriodEnd.setFullYear(now.getFullYear() + 1);
+    }
+
+    await db.insert(subscriptions).values({
+      userId: user.id,
+      plan: plan as 'pro_monthly' | 'pro_yearly',
+      status: 'pending',
+      stripeSubscriptionId: subscription.id,
+      paymentGateway: 'stripe',
+      currentPeriodStart: now,
+      currentPeriodEnd,
+    }).onConflictDoUpdate({
+      target: [subscriptions.userId],
+      set: {
         plan: plan as 'pro_monthly' | 'pro_yearly',
         status: 'pending',
         stripeSubscriptionId: subscription.id,
         paymentGateway: 'stripe',
         currentPeriodStart: now,
         currentPeriodEnd,
-      }).onConflictDoUpdate({
-        target: [subscriptions.userId],
-        set: {
-          plan: plan as 'pro_monthly' | 'pro_yearly',
-          status: 'pending',
-          stripeSubscriptionId: subscription.id,
-          paymentGateway: 'stripe',
-          currentPeriodStart: now,
-          currentPeriodEnd,
-        },
-      });
+      },
+    });
 
-      return NextResponse.json({
-        subscriptionId: subscription.id,
-        clientSecret: paymentIntent.client_secret,
-      });
-
-    } else if (paymentGateway === 'razorpay') {
-      if (!razorpay) {
-        return NextResponse.json(
-          { error: 'Razorpay not configured' },
-          { status: 503 }
-        );
-      }
-
-      const order = await razorpay.orders.create({
-        amount: amount,
-        currency: currency,
-        notes: {
-          plan: plan,
-          userId: user.id,
-          email: user.email || '',
-        },
-      });
-
-      const now = new Date();
-      const currentPeriodEnd = new Date(now);
-      if (plan === 'pro_monthly') {
-        currentPeriodEnd.setMonth(now.getMonth() + 1);
-      } else {
-        currentPeriodEnd.setFullYear(now.getFullYear() + 1);
-      }
-
-      await db.insert(subscriptions).values({
-        userId: user.id,
-        plan: plan as 'pro_monthly' | 'pro_yearly',
-        status: 'pending',
-        razorpaySubscriptionId: order.id,
-        paymentGateway: 'razorpay',
-        currentPeriodStart: now,
-        currentPeriodEnd,
-      }).onConflictDoUpdate({
-        target: [subscriptions.userId],
-        set: {
-          plan: plan as 'pro_monthly' | 'pro_yearly',
-          status: 'pending',
-          razorpaySubscriptionId: order.id,
-          paymentGateway: 'razorpay',
-          currentPeriodStart: now,
-          currentPeriodEnd,
-        },
-      });
-
-      return NextResponse.json({
-        orderId: order.id,
-        amount: order.amount,
-        currency: order.currency,
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-      });
-    }
-
-    return NextResponse.json(
-      { error: 'Invalid payment gateway' },
-      { status: 400 }
-    );
+    return NextResponse.json({
+      subscriptionId: subscription.id,
+      clientSecret: paymentIntent.client_secret,
+    });
 
   } catch (error) {
     console.error('POST /api/subscriptions: Error:', error);

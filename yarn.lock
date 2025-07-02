@@ -1215,7 +1215,7 @@ axe-core@=4.7.0:
   resolved "https://registry.npmjs.org/axe-core/-/axe-core-4.7.0.tgz"
   integrity sha512-M0JtH+hlOL5pLQwHOLNYZaXuhqmvS8oExsqB1SBYgA4Dk7u/xx+YdGHXaK5pyUfed5mYXdlYiphWq3G8cRi5JQ==
 
-axios@*, axios@^1.6.8, axios@^1.8.2, axios@^1.8.3:
+axios@*, axios@^1.8.2, axios@^1.8.3:
   version "1.8.3"
   resolved "https://registry.npmjs.org/axios/-/axios-1.8.3.tgz"
   integrity sha512-iP4DebzoNlP/YN2dpwCgb8zoCmhtkajzS48JvwmkSkXvPI3DHc7m+XYL5tGnSlJtR6nImXZmdCuN5aP8dh1d8A==
@@ -4416,13 +4416,6 @@ raf@^3.4.1:
   integrity sha512-Sq4CW4QhwOHE8ucn6J34MqtZCeWFP2aQSmrlroYgqAV1PjStIhJXxYuTgUIfkEk7zTLjmIjLmU5q+fbD1NnOJA==
   dependencies:
     performance-now "^2.1.0"
-
-razorpay@^2.9.2:
-  version "2.9.6"
-  resolved "https://registry.npmjs.org/razorpay/-/razorpay-2.9.6.tgz"
-  integrity sha512-zsHAQzd6e1Cc6BNoCNZQaf65ElL6O6yw0wulxmoG5VQDr363fZC90Mp1V5EktVzG45yPyNomNXWlf4cQ3622gQ==
-  dependencies:
-    axios "^1.6.8"
 
 rc@^1.2.7:
   version "1.2.8"

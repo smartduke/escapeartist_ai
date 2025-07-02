@@ -42,7 +42,7 @@ export const subscriptions = pgTable('subscriptions', {
   status: text('status', { enum: ['active', 'inactive', 'canceled', 'past_due', 'pending'] }).notNull(),
   razorpaySubscriptionId: text('razorpaySubscriptionId'),
   stripeSubscriptionId: text('stripeSubscriptionId'),
-  paymentGateway: text('paymentGateway', { enum: ['razorpay', 'stripe'] }),
+  paymentGateway: text('paymentGateway', { enum: ['stripe'] }),
   currentPeriodStart: timestamp('currentPeriodStart').notNull(),
   currentPeriodEnd: timestamp('currentPeriodEnd').notNull(),
   createdAt: timestamp('createdAt').defaultNow().notNull(),

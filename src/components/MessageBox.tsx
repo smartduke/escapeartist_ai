@@ -1530,10 +1530,14 @@ const MessageBox = ({
   const [sidebarSources, setSidebarSources] = useState<Document[]>([]);
   const [sidebarMessageIndex, setSidebarMessageIndex] = useState(0);
   const [activeTab, setActiveTab] = useState('answer');
+  const [imageTabClickCount, setImageTabClickCount] = useState(0);
   const tabNavRef = useRef<HTMLDivElement>(null);
 
   const handleTabClick = (tabName: string) => {
     setActiveTab(tabName);
+    if (tabName === 'images') {
+      setImageTabClickCount(prev => prev + 1);
+    }
     tabNavRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
@@ -1845,6 +1849,7 @@ const MessageBox = ({
             {activeTab === 'images' && (
               <div className="w-full">
                 <SearchImages
+                  key={`${message.messageId}-images-${imageTabClickCount}`}
                   query={history[messageIndex - 1]?.content || ''}
                   chatHistory={history.slice(0, messageIndex - 1)}
                   messageId={message.messageId}

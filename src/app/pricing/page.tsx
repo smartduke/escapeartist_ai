@@ -9,7 +9,6 @@ import StripeCardElement from '@/components/subscription/StripeCardElement';
 
 declare global {
   interface Window {
-    Razorpay: any;
     Stripe: any;
   }
 }
@@ -81,25 +80,12 @@ export default function PricingPage() {
   const { user, isLoading } = useAuth();
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
-  const [paymentGateway, setPaymentGateway] = useState<'stripe' | 'razorpay'>('stripe');
   const [stripeElements, setStripeElements] = useState<any>(null);
   const [stripeInstance, setStripeInstance] = useState<any>(null);
   const [showStripeForm, setShowStripeForm] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Load Razorpay script for authenticated users
-    if (user) {
-      const razorpayScript = document.createElement('script');
-      razorpayScript.src = 'https://checkout.razorpay.com/v1/checkout.js';
-      razorpayScript.async = true;
-      document.body.appendChild(razorpayScript);
 
-      return () => {
-        document.body.removeChild(razorpayScript);
-      };
-    }
-  }, [user]);
 
   const handleStripeElementsReady = (elements: any, stripe: any) => {
     setStripeElements(elements);
@@ -119,65 +105,7 @@ export default function PricingPage() {
     }
 
     setSelectedPlan(planId);
-
-    if (paymentGateway === 'stripe') {
-      setShowStripeForm(true);
-      return;
-    }
-
-    try {
-      const response = await fetch('/api/subscriptions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ plan: planId, paymentGateway }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create subscription');
-      }
-
-      const data = await response.json();
-
-      // Initialize Razorpay payment
-      const options = {
-        key: data.key,
-        amount: data.amount,
-        currency: data.currency,
-        name: 'EscapeArtist AI',
-        description: `${planId === 'pro_monthly' ? 'Monthly' : 'Yearly'} Pro Plan`,
-        order_id: data.orderId,
-        handler: async (response: any) => {
-          console.log('Payment successful:', response);
-          toast.success('Payment successful! Your subscription is now active.');
-          window.location.href = '/profile';
-        },
-        prefill: {
-          name: user.name || '',
-          email: user.email || '',
-        },
-        theme: {
-          color: '#3B82F6',
-        },
-        modal: {
-          ondismiss: () => {
-            toast.error('Payment cancelled');
-          },
-        },
-      };
-
-      if (typeof window.Razorpay === 'undefined') {
-        toast.error('Payment service not available. Please refresh the page.');
-        return;
-      }
-
-      const razorpay = new window.Razorpay(options);
-      razorpay.open();
-    } catch (error) {
-      console.error('Subscription error:', error);
-      toast.error('Failed to create subscription');
-    }
+    setShowStripeForm(true);
   };
 
   const handleStripeSubmit = async () => {
@@ -191,7 +119,7 @@ export default function PricingPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ plan: selectedPlan, paymentGateway: 'stripe' }),
+        body: JSON.stringify({ plan: selectedPlan }),
       });
 
       if (!response.ok) {
@@ -237,35 +165,7 @@ export default function PricingPage() {
             Choose the plan that's right for you
           </p>
           
-          {/* Payment Gateway Selector */}
-          <div className="mt-8 flex justify-center gap-4">
-            <button
-              onClick={() => {
-                setPaymentGateway('stripe');
-                setShowStripeForm(false);
-              }}
-              className={`px-4 py-2 rounded-lg transition-all ${
-                paymentGateway === 'stripe'
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
-              }`}
-            >
-              Pay with Stripe
-            </button>
-            <button
-              onClick={() => {
-                setPaymentGateway('razorpay');
-                setShowStripeForm(false);
-              }}
-              className={`px-4 py-2 rounded-lg transition-all ${
-                paymentGateway === 'razorpay'
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
-              }`}
-            >
-              Pay with Razorpay
-            </button>
-          </div>
+
         </div>
 
         {showStripeForm ? (
