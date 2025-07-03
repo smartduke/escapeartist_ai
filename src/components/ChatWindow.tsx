@@ -456,33 +456,13 @@ const ChatWindow = ({ id }: { id?: string }) => {
 
       if (data.type === 'sources') {
         sources = data.data;
-        if (!added) {
-          setMessages((prevMessages) => [
-            ...prevMessages,
-            {
-              content: '',
-              messageId: data.messageId,
-              chatId: chatId!,
-              role: 'assistant',
-              sources: sources,
-              createdAt: new Date(),
-            },
-          ]);
-          added = true;
-          
-          // Update URL without page refresh if we're starting a new chat from homepage
-          // This happens after we get the first response, ensuring the chat exists
-          if (newChatCreated && messages.length === 0) {
-            const templateParam = focusMode !== 'escapeArtistSearch' ? `?template=${focusMode}` : '';
-            const newUrl = `/c/${chatId}${templateParam}`;
-            window.history.replaceState(null, '', newUrl);
-          }
-        }
+        // Don't create a message here, wait for content
         setMessageAppeared(true);
       }
 
       if (data.type === 'message') {
         if (!added) {
+          // Create the message only once when we get the first content
           setMessages((prevMessages) => [
             ...prevMessages,
             {
@@ -497,23 +477,26 @@ const ChatWindow = ({ id }: { id?: string }) => {
           added = true;
           
           // Update URL without page refresh if we're starting a new chat from homepage
-          // This happens after we get the first response, ensuring the chat exists
           if (newChatCreated && messages.length === 0) {
             const templateParam = focusMode !== 'escapeArtistSearch' ? `?template=${focusMode}` : '';
             const newUrl = `/c/${chatId}${templateParam}`;
             window.history.replaceState(null, '', newUrl);
           }
+        } else {
+          // Update existing message content
+          setMessages((prev) =>
+            prev.map((message) => {
+              if (message.messageId === data.messageId) {
+                return { 
+                  ...message, 
+                  content: message.content + data.data,
+                  sources: sources // Update sources if they arrived later
+                };
+              }
+              return message;
+            }),
+          );
         }
-
-        setMessages((prev) =>
-          prev.map((message) => {
-            if (message.messageId === data.messageId) {
-              return { ...message, content: message.content + data.data };
-            }
-
-            return message;
-          }),
-        );
 
         recievedMessage += data.data;
         setMessageAppeared(true);
@@ -669,7 +652,6 @@ const ChatWindow = ({ id }: { id?: string }) => {
     const reader = res.body?.getReader();
     const decoder = new TextDecoder('utf-8');
 
-    let partialChunk = '';
     let buffer = '';
 
     while (true) {
@@ -677,14 +659,15 @@ const ChatWindow = ({ id }: { id?: string }) => {
       if (done) {
         // Process any remaining complete messages in the buffer
         if (buffer.trim()) {
-          const messages = buffer.split('\n');
-          for (const msg of messages) {
-            if (!msg.trim()) continue;
+          const lines = buffer.trim().split('\n');
+          for (const line of lines) {
+            if (!line.trim()) continue;
             try {
-              const json = JSON.parse(msg);
+              const json = JSON.parse(line);
+              console.log('Processing final message:', json.type);
               messageHandler(json);
             } catch (error) {
-              console.warn('Failed to parse final message:', error);
+              console.warn('Failed to parse final message:', line, error);
             }
           }
         }
@@ -693,22 +676,22 @@ const ChatWindow = ({ id }: { id?: string }) => {
 
       buffer += decoder.decode(value, { stream: true });
       
-      // Process complete messages
-      const messages = buffer.split('\n');
+      // Process complete messages (lines ending with \n)
+      const lines = buffer.split('\n');
       
-      // Keep the last potentially incomplete message in the buffer
-      buffer = messages.pop() || '';
+      // Keep the last potentially incomplete line in the buffer
+      buffer = lines.pop() || '';
       
-      // Process all complete messages
-      for (const msg of messages) {
-        if (!msg.trim()) continue;
+      // Process all complete lines
+      for (const line of lines) {
+        if (!line.trim()) continue;
         try {
-          const json = JSON.parse(msg);
+          const json = JSON.parse(line);
+          console.log('Processing streaming message:', json.type, json.data?.substring?.(0, 50) || 'no data');
           messageHandler(json);
         } catch (error) {
-          // If we can't parse a complete message, something is wrong
-          console.error('Failed to parse complete message:', error);
-          buffer = ''; // Reset buffer on error
+          console.error('Failed to parse streaming message:', line, error);
+          // Continue processing other messages instead of resetting buffer
         }
       }
     }
