@@ -508,8 +508,8 @@ class MetaSearchAgent implements MetaSearchAgentType {
     emitter: eventEmitter,
   ) {
     let buffer = '';
-    const CHUNK_SIZE = 4; // Number of characters to accumulate before sending
-    const STREAM_DELAY = 10; // Milliseconds between chunks
+    const CHUNK_SIZE = 80; // Increased from 4 to 80 characters
+    const STREAM_DELAY = 25; // Increased from 10 to 25 milliseconds
 
     for await (const event of stream) {
       if (

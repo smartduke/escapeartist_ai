@@ -12,6 +12,11 @@ services:
     networks:
       - perplexica-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1G
 
   searxng:
     image: docker.io/searxng/searxng:latest
@@ -22,6 +27,11 @@ services:
     networks:
       - perplexica-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
 
   app:
     image: escapeartist-ai/app:latest
@@ -33,6 +43,7 @@ services:
         - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
         - NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}
     environment:
+      - NODE_ENV=production
       - SEARXNG_API_URL=http://searxng:8080
       - DATA_DIR=/home/EA-Agent
       - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
@@ -51,15 +62,12 @@ services:
       - STRIPE_YEARLY_PRICE_ID=${STRIPE_YEARLY_PRICE_ID}
       # Token Limits - FREE PLAN (GPT-4o-mini only)
       - FREE_LIMIT_GPT_4O_MINI=${FREE_LIMIT_GPT_4O_MINI:-20000}
-      # Token Limits - PRO PLAN (Conservative limits within $6.50 budget)
-      # GPT Models
+      # Token Limits - PRO PLAN
       - PRO_LIMIT_GPT_4O_MINI=${PRO_LIMIT_GPT_4O_MINI:-2000000}
       - PRO_LIMIT_GPT_4_1=${PRO_LIMIT_GPT_4_1:-50000}
-      # Claude Models  
       - PRO_LIMIT_CLAUDE_SONNET_4=${PRO_LIMIT_CLAUDE_SONNET_4:-100000}
-      # Gemini Models
       - PRO_LIMIT_GEMINI_2_5_PRO=${PRO_LIMIT_GEMINI_2_5_PRO:-200000}
-      # Legacy models (disabled for free, minimal for pro)
+      # Legacy models limits
       - FREE_LIMIT_GPT_4O=${FREE_LIMIT_GPT_4O:-0}
       - PRO_LIMIT_GPT_4O=${PRO_LIMIT_GPT_4O:-50000}
       - FREE_LIMIT_GPT_4=${FREE_LIMIT_GPT_4:-0}
@@ -78,7 +86,25 @@ services:
       - perplexica-network
     volumes:
       - uploads:/home/EA-Agent/uploads
-      - ./config.toml:/home/perplexica/config.toml
+      - ./config.toml:/home/EA-Agent/config.toml:ro
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 6G
+        reservations:
+          cpus: '1'
+          memory: 2G
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    sysctls:
+      net.core.somaxconn: '2048'
+      net.ipv4.tcp_max_syn_backlog: '2048'
+      net.ipv4.tcp_keepalive_time: '600'
+      net.ipv4.tcp_keepalive_intvl: '60'
+      net.ipv4.tcp_keepalive_probes: '3'
     depends_on:
       - postgres
       - searxng
@@ -86,6 +112,11 @@ services:
 
 networks:
   perplexica-network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: 1450
+      com.docker.network.bridge.enable_icc: 'true'
+      com.docker.network.bridge.enable_ip_masquerade: 'true'
 
 volumes:
   uploads:

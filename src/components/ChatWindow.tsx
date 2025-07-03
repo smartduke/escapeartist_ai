@@ -670,23 +670,46 @@ const ChatWindow = ({ id }: { id?: string }) => {
     const decoder = new TextDecoder('utf-8');
 
     let partialChunk = '';
+    let buffer = '';
 
     while (true) {
       const { value, done } = await reader.read();
-      if (done) break;
+      if (done) {
+        // Process any remaining complete messages in the buffer
+        if (buffer.trim()) {
+          const messages = buffer.split('\n');
+          for (const msg of messages) {
+            if (!msg.trim()) continue;
+            try {
+              const json = JSON.parse(msg);
+              messageHandler(json);
+            } catch (error) {
+              console.warn('Failed to parse final message:', error);
+            }
+          }
+        }
+        break;
+      }
 
-      partialChunk += decoder.decode(value, { stream: true });
-
-      try {
-        const messages = partialChunk.split('\n');
-        for (const msg of messages) {
-          if (!msg.trim()) continue;
+      buffer += decoder.decode(value, { stream: true });
+      
+      // Process complete messages
+      const messages = buffer.split('\n');
+      
+      // Keep the last potentially incomplete message in the buffer
+      buffer = messages.pop() || '';
+      
+      // Process all complete messages
+      for (const msg of messages) {
+        if (!msg.trim()) continue;
+        try {
           const json = JSON.parse(msg);
           messageHandler(json);
+        } catch (error) {
+          // If we can't parse a complete message, something is wrong
+          console.error('Failed to parse complete message:', error);
+          buffer = ''; // Reset buffer on error
         }
-        partialChunk = '';
-      } catch (error) {
-        console.warn('Incomplete JSON, waiting for next chunk...');
       }
     }
   };
