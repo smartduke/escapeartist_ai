@@ -462,15 +462,54 @@ const ChatWindow = ({ id }: { id?: string }) => {
       }
 
       if (data.type === 'sources') {
-        sources = data.data;
-        // Sources received - this means we're getting ready for content
-        // Don't set messageAppeared yet, wait for actual content
-        console.log('Sources received, preparing for content');
+        // Process sources to ensure URLs are complete and valid
+        const processedSources = data.data.map((source: Document) => {
+          if (source.metadata?.url) {
+            // Ensure URL is complete and valid
+            try {
+              const url = new URL(source.metadata.url);
+              source.metadata.url = url.toString();
+            } catch (e) {
+              // If URL is incomplete or invalid, try to fix it
+              if (!source.metadata.url.startsWith('http')) {
+                source.metadata.url = `https://${source.metadata.url.replace(/^[\/]+/, '')}`;
+              }
+            }
+          }
+          return source;
+        }).filter((source: Document) => source && source.metadata?.url); // Filter out invalid sources
+        
+        sources = processedSources;
+        
+        // Update existing message with new sources if it exists
+        setMessages((prev) =>
+          prev.map((message) => {
+            if (message.messageId === data.messageId) {
+              return {
+                ...message,
+                sources: processedSources
+              };
+            }
+            return message;
+          })
+        );
+        
+        console.log('Sources processed and attached:', {
+          messageId: data.messageId,
+          sourceCount: processedSources.length,
+          sources: processedSources.map((s: Document) => s.metadata?.url)
+        });
       }
 
       if (data.type === 'message') {
         if (!added) {
           // Create the message only once when we get the first content
+          const initialSources = sources || [];
+          console.log('Creating new message with sources:', {
+            messageId: data.messageId,
+            sourceCount: initialSources.length
+          });
+          
           setMessages((prevMessages) => [
             ...prevMessages,
             {
@@ -478,7 +517,7 @@ const ChatWindow = ({ id }: { id?: string }) => {
               messageId: data.messageId,
               chatId: chatId!,
               role: 'assistant',
-              sources: sources,
+              sources: initialSources,
               createdAt: new Date(),
             },
           ]);
@@ -494,21 +533,22 @@ const ChatWindow = ({ id }: { id?: string }) => {
             const newUrl = `/c/${chatId}${templateParam}`;
             window.history.replaceState(null, '', newUrl);
           }
-        } else {
-          // Update existing message content with smooth batching
-          setMessages((prev) =>
-            prev.map((message) => {
-              if (message.messageId === data.messageId) {
-                return { 
-                  ...message, 
-                  content: message.content + data.data,
-                  sources: sources // Update sources if they arrived later
-                };
-              }
-              return message;
-            }),
-          );
         }
+
+        // Update existing message content with smooth batching
+        setMessages((prev) =>
+          prev.map((message) => {
+            if (message.messageId === data.messageId) {
+              const updatedSources = sources || message.sources || [];
+              return { 
+                ...message, 
+                content: message.content + data.data,
+                sources: updatedSources
+              };
+            }
+            return message;
+          }),
+        );
 
         recievedMessage += data.data;
       }
@@ -553,8 +593,6 @@ const ChatWindow = ({ id }: { id?: string }) => {
 
         if (
           lastMsg.role === 'assistant' &&
-          lastMsg.sources &&
-          lastMsg.sources.length > 0 &&
           !lastMsg.suggestions
         ) {
           console.log('Generating suggestions for message:', lastMsg.messageId);
@@ -584,7 +622,7 @@ const ChatWindow = ({ id }: { id?: string }) => {
             console.error('Failed to save suggestions to database:', error);
           }
         } else {
-          console.log('Suggestions condition not met');
+          console.log('Suggestions condition not met - either not assistant role or already has suggestions');
         }
       }
     };
