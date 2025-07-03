@@ -74,34 +74,45 @@ const handleEmitterEvents = async (
   let recievedMessage = '';
   let sources: any[] = [];
 
+  // Send initial message to establish streaming connection
+  writer.write(
+    encoder.encode(
+      JSON.stringify({
+        type: 'init',
+        data: 'Connected',
+        messageId: aiMessageId,
+      }) + '\n',
+    ),
+  );
+
   stream.on('data', (data) => {
     const parsedData = JSON.parse(data);
     if (parsedData.type === 'response') {
-      writer.write(
-        encoder.encode(
-          JSON.stringify({
-            type: 'message',
-            data: parsedData.data,
-            messageId: aiMessageId,
-          }) + '\n',
-        ),
+      const chunk = encoder.encode(
+        JSON.stringify({
+          type: 'message',
+          data: parsedData.data,
+          messageId: aiMessageId,
+        }) + '\n',
       );
-
+      writer.write(chunk);
+      // Force flush - this is crucial for server streaming
+      
       recievedMessage += parsedData.data;
     } else if (parsedData.type === 'sources') {
-      writer.write(
-        encoder.encode(
-          JSON.stringify({
-            type: 'sources',
-            data: parsedData.data,
-            messageId: aiMessageId,
-          }) + '\n',
-        ),
+      const chunk = encoder.encode(
+        JSON.stringify({
+          type: 'sources',
+          data: parsedData.data,
+          messageId: aiMessageId,
+        }) + '\n',
       );
-
+      writer.write(chunk);
+      
       sources = parsedData.data;
     }
   });
+  
   stream.on('end', async () => {
     writer.write(
       encoder.encode(
@@ -154,6 +165,7 @@ const handleEmitterEvents = async (
       }
     }
   });
+  
   stream.on('error', (data) => {
     const parsedData = JSON.parse(data);
     writer.write(
@@ -383,8 +395,13 @@ export const POST = async (req: Request) => {
     return new Response(responseStream.readable, {
       headers: {
         'Content-Type': 'text/event-stream',
-        Connection: 'keep-alive',
-        'Cache-Control': 'no-cache, no-transform',
+        'Connection': 'keep-alive',
+        'Cache-Control': 'no-cache, no-store, no-transform',
+        'X-Accel-Buffering': 'no', // Disable Nginx buffering
+        'X-Content-Type-Options': 'nosniff',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
       },
     });
   } catch (err) {

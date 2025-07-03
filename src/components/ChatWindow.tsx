@@ -454,6 +454,12 @@ const ChatWindow = ({ id }: { id?: string }) => {
         return;
       }
 
+      if (data.type === 'init') {
+        // Initial connection established - streaming is working
+        console.log('Streaming connection established');
+        return;
+      }
+
       if (data.type === 'sources') {
         sources = data.data;
         // Don't create a message here, wait for content

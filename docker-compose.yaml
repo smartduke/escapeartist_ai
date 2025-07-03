@@ -46,8 +46,13 @@ services:
       - NODE_ENV=production
       - SEARXNG_API_URL=http://searxng:8080
       - DATA_DIR=/home/EA-Agent
-      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
-      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      # Disable buffering for streaming
+      - NODE_NO_WARNINGS=1
+      - FORCE_COLOR=0
+      - CI=true
+      # Next.js specific streaming optimizations
+      - NEXT_TELEMETRY_DISABLED=1
+      - NEXT_TURBO=false
       # PostgreSQL Configuration
       - DB_HOST=postgres
       - DB_PORT=5432
