@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Globe2, Home, Briefcase, Plane, Heart, Building2, GlobeIcon, X, Sparkles, Compass } from 'lucide-react';
+import { Settings, Globe2, Home, Briefcase, Plane, Heart, Building2, GlobeIcon, X, Sparkles, Compass, User, DollarSign, Monitor } from 'lucide-react';
 import EmptyChatMessageInput from './EmptyChatMessageInput';
 import { File } from './ChatWindow';
 import Link from 'next/link';
@@ -58,55 +58,55 @@ const EmptyChat = ({
 
   const categories = [
     {
-      icon: GlobeIcon,
+      icon: User,
       label: 'Second Citizenship',
       color: 'blue',
       quickPrompts: [
-        'Compare EU citizenship by investment programs',
-        'Best Caribbean passport programs in 2025',
-        'How to get Portuguese citizenship through D7 visa',
-        'Compare golden visa programs worldwide',
-        'Citizenship through ancestry options',
-        'Fastest routes to second citizenship'
+        "What's the easiest country to get a second passport in 2025?",
+        'How much does citizenship by investment really cost?',
+        'Can a second passport actually change your life? Here’s how.',
+        'Can I get a second passport through ancestry or descent?',
+        'What are the benefits of having two or more passports?',
+        'Which second passports offer visa-free access to the most countries?'
       ]
     },
     {
-      icon: Building2,
+      icon: DollarSign,
       label: 'Finance & Banking',
-      color: 'emerald',
+      color: 'violet',
       quickPrompts: [
-        'Best offshore banking jurisdictions in 2024',
-        'How to open international bank accounts',
-        'Tax optimization strategies for expats',
-        'Compare private banking services',
-        'Asset protection strategies offshore',
-        'International investment opportunities'
+        'Which countries offer the safest offshore banking options?',
+        'How do I legally open an offshore bank account in 2025?',
+        'Can offshore banking lower my taxes or protect my wealth?',
+        'Is offshore banking still private and secure today?',
+        'What are the pros and cons of offshore trusts and accounts?',
+        'Compare global banking systems — where does your money work best?'
       ]
     },
     {
       icon: Home,
       label: 'Real Estate',
-      color: 'purple',
+      color: 'pink',
       quickPrompts: [
-        'Best countries for property investment',
-        'Compare real estate markets in Europe',
-        'Property buying guide in Portugal',
-        'Real estate investment for residency',
-        'Latin American property markets',
-        'Rental yield comparison by country'
+        'Where can I buy beachfront property for under $150K?',
+        'Top 5 countries to invest in real estate right now',
+        'What are the legal risks when buying property abroad?',
+        'How do I finance a home overseas as a foreigner?',
+        'Which countries allow foreigners to own land easily?',
+        'Is international real estate still a good investment in 2025?'
       ]
     },
     {
-      icon: Briefcase,
+      icon: Monitor,
       label: 'Digital Nomad',
-      color: 'pink',
+      color: 'emerald',
       quickPrompts: [
-        'Best digital nomad visa programs',
-        'Remote work-friendly countries',
-        'Compare cost of living for nomads',
-        'Nomad-friendly banking solutions',
-        'Best coworking destinations',
-        'Tax implications for digital nomads'
+        'Which countries have the best digital nomad visas in 2025?',
+        'How can I work legally while living abroad?',
+        'Top 5 cities for digital nomads — ranked by cost, safety & internet',
+        'I want to live abroad and work online — where do I start?',
+        'How do digital nomads deal with taxes and banking?',
+        'What\'s the best country for slow travel and remote work?'
       ]
     },
     {
@@ -114,12 +114,12 @@ const EmptyChat = ({
       label: 'Destinations',
       color: 'orange',
       quickPrompts: [
-        'Compare living costs in European cities',
-        'Best expat communities in Asia',
-        'Healthcare quality by country',
-        'Safest countries for expats',
-        'Family-friendly expat destinations',
-        'Best places for retirement abroad'
+        'Which is better to live: Belize, Panama, or Costa Rica?',
+        'Top 10 safest countries for expats in 2025',
+        'Best places to live abroad if you only speak English',
+        'Where can I escape the cold and live affordably?',
+        'Is Portugal still the best country for expats? Let\'s see.',
+        'Hidden gem destinations expats don\'t talk about (but love!)'
       ]
     },
     {
@@ -127,12 +127,12 @@ const EmptyChat = ({
       label: 'Lifestyle',
       color: 'cyan',
       quickPrompts: [
-        'Healthcare systems comparison',
-        'International schools guide',
-        'Cultural adaptation tips',
-        'Making friends as an expat',
-        'Language learning resources',
-        'Work-life balance abroad'
+        'What\'s it really like living off the grid in paradise?',
+        'How do people retire early and live abroad stress-free?',
+        'Where do expats live longer and healthier lives?',
+        'Is it possible to live abroad with just a laptop?',
+        'How much does everyday life cost in your dream destination?',
+        'Can I take my pets when I move abroad?'
       ]
     },
     {
@@ -140,12 +140,12 @@ const EmptyChat = ({
       label: 'Legal & Tax',
       color: 'amber',
       quickPrompts: [
-        'Tax residency requirements',
-        'Offshore company formation',
-        'International tax planning',
-        'Legal compliance for expats',
-        'Business immigration programs',
-        'Double taxation agreements'
+        'What are the top countries with low or zero income tax?',
+        'Do I still need to pay U.S. taxes if I move abroad?',
+        'How to legally reduce your tax bill by living overseas',
+        'What are the legal risks of going offshore — and how to avoid them?',
+        'Understanding FATCA, CRS, and your reporting obligations',
+        'Can I set up a legal offshore company to protect my income?'
       ]
     },
     {
@@ -153,12 +153,12 @@ const EmptyChat = ({
       label: 'Getting Started',
       color: 'green',
       quickPrompts: [
-        'First steps to moving abroad',
-        'Essential documents checklist',
-        'Cost comparison calculator',
-        'Timeline for moving overseas',
-        'Common expat mistakes to avoid',
-        'Choosing your ideal country'
+        'What\'s the easiest country to move to in 2025?',
+        'How do I start planning my escape abroad step-by-step?',
+        'How do I move overseas — with family, pets, and business?',
+        'I\'m ready to go abroad. What should I do first?',
+        'Where should I live if I want freedom, low taxes, and great weather?',
+        'Ask me anything about moving, banking, or living overseas!'
       ]
     }
   ];

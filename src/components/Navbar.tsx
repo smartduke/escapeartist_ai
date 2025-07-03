@@ -2,7 +2,6 @@ import { Clock, Edit, Share, Trash, FileText, FileDown, File } from 'lucide-reac
 import { Message } from './ChatWindow';
 import { useEffect, useState, Fragment } from 'react';
 import React from 'react';
-import { formatTimeDifference } from '@/lib/utils';
 import DeleteChat from './DeleteChat';
 import {
   Popover,
@@ -15,8 +14,6 @@ import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Tabl
 import { saveAs } from 'file-saver';
 import { useSidebar } from './SidebarContext';
 import { cn } from '@/lib/utils';
-import { allTemplates } from './MessageInputActions/Focus';
-import { useRouter } from 'next/navigation';
 
 const downloadFile = (filename: string, content: string, type: string) => {
   const blob = new Blob([content], { type });
@@ -961,22 +958,8 @@ const Navbar = ({
 }) => {
   const [title, setTitle] = useState<string>('');
   const [currentTitle, setCurrentTitle] = useState<string>('');
-  const [timeAgo, setTimeAgo] = useState<string>('');
   const [showTitle, setShowTitle] = useState<boolean>(false);
   const { isExpanded } = useSidebar();
-  const router = useRouter();
-
-  // Get current template info
-  const currentTemplate = allTemplates.find(template => template.key === focusMode);
-  const templateName = currentTemplate?.title || 'Escape Artist';
-
-  const handleTemplateClick = () => {
-    // Navigate to homepage with template selected
-      const url = focusMode && focusMode !== 'escapeArtistSearch'
-    ? `/?template=${focusMode}` 
-      : '/';
-    window.location.href = url;
-  };
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -986,28 +969,8 @@ const Navbar = ({
           : messages[0].content;
       setTitle(newTitle);
       setCurrentTitle(newTitle); // Initialize current title
-      const newTimeAgo = formatTimeDifference(
-        new Date(),
-        messages[0].createdAt,
-      );
-      setTimeAgo(newTimeAgo);
     }
   }, [messages]);
-
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      if (messages.length > 0) {
-        const newTimeAgo = formatTimeDifference(
-          new Date(),
-          messages[0].createdAt,
-        );
-        setTimeAgo(newTimeAgo);
-      }
-    }, 1000);
-
-    return () => clearInterval(intervalId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -1054,66 +1017,24 @@ const Navbar = ({
       isExpanded ? "lg:pl-[280px]" : "lg:pl-[60px]",
       "px-4 lg:pr-6"
     )}>
-      <div className="flex items-center gap-3 lg:hidden">
+      {/* Left side - Home button (mobile) and Title */}
+      <div className="flex items-center gap-3">
         <a
           href="/"
-          className="active:scale-95 transition duration-100 cursor-pointer"
+          className="active:scale-95 transition duration-100 cursor-pointer lg:hidden"
         >
           <Edit size={17} />
         </a>
         
-        {/* Mobile Template Name */}
-        <button
-          onClick={handleTemplateClick}
-          className="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-light-secondary dark:hover:bg-dark-secondary transition-colors"
-          title={`Switch to ${templateName} template`}
-        >
-          {currentTemplate && (
-            <div className="text-blue-600 dark:text-blue-400">
-              {React.cloneElement(currentTemplate.icon as React.ReactElement, { 
-                size: 12, 
-                className: "stroke-[1.5]" 
-              })}
-            </div>
-          )}
-          <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
-            {templateName}
-          </span>
-        </button>
-      </div>
-      
-      <div className="hidden lg:flex flex-row items-center justify-center space-x-4">
-        {/* Template Name */}
-        <button
-          onClick={handleTemplateClick}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-light-secondary dark:hover:bg-dark-secondary transition-colors group"
-          title={`Switch to ${templateName} template`}
-        >
-          {currentTemplate && (
-            <div className="text-blue-600 dark:text-blue-400">
-              {React.cloneElement(currentTemplate.icon as React.ReactElement, { 
-                size: 14, 
-                className: "stroke-[1.5]" 
-              })}
-            </div>
-          )}
-          <span className="text-sm font-medium text-blue-600 dark:text-blue-400 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors">
-            {templateName}
-          </span>
-        </button>
-        
-        {/* Show title when scrolled */}
-        {showTitle && (
-          <>
-            <div className="w-px h-4 bg-light-200 dark:bg-dark-200" />
-            <div className="flex items-center">
-              <p className="text-lg font-semibold truncate max-w-lg">{currentTitle || title}</p>
-            </div>
-          </>
+        {/* Title */}
+        {title && (
+          <p className="text-lg font-semibold truncate max-w-lg text-black dark:text-white">
+            {showTitle ? (currentTitle || title) : title}
+          </p>
         )}
       </div>
-      <p className={cn("hidden lg:flex transition-opacity duration-300", showTitle ? "opacity-0" : "opacity-100")}>{title}</p>
 
+      {/* Right side - Export and Delete */}
       <div className="flex flex-row items-center space-x-4">
         <Popover className="relative">
           <PopoverButton className="active:scale-95 transition duration-100 cursor-pointer p-2 rounded-full hover:bg-light-secondary dark:hover:bg-dark-secondary">

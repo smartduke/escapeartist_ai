@@ -436,6 +436,10 @@ class MetaSearchAgent implements MetaSearchAgentType {
   }
 
   private processDocs(docs: Document[]) {
+    if (docs.length === 0) {
+      return `NO SOURCES AVAILABLE: No relevant sources were found for this query. Please provide a helpful response based on your general knowledge without using any citation numbers [1], [2], etc.`;
+    }
+    
     const processedDocs = docs
       .map(
         (_, index) =>
