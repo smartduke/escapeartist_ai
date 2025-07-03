@@ -162,7 +162,7 @@ export default function PricingPage() {
             Simple, transparent pricing
           </h1>
           <p className="text-xl text-gray-600 dark:text-gray-400">
-            Choose the plan that's right for you
+            Choose the plan that&apos;s right for you
           </p>
           
 

@@ -97,7 +97,7 @@ export const UsageLimitWarning: React.FC<UsageLimitWarningProps> = ({ userId, mo
             Usage Limit Warning
           </h4>
           <p className="text-sm text-yellow-700 dark:text-yellow-300 mb-2">
-            You're approaching your token limits for this month.
+            You&apos;re approaching your token limits for this month.
           </p>
           
           {modelInfo && modelInfo.percentage >= 80 && (
