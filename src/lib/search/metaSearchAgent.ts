@@ -508,8 +508,22 @@ class MetaSearchAgent implements MetaSearchAgentType {
     emitter: eventEmitter,
   ) {
     let buffer = '';
-    const CHUNK_SIZE = 80; // Increased from 4 to 80 characters
-    const STREAM_DELAY = 25; // Increased from 10 to 25 milliseconds
+    let totalChunksEmitted = 0;
+    
+    // Progressive streaming: start fast, then slow down for better readability
+    const getStreamDelay = (chunkCount: number) => {
+      if (chunkCount < 10) return 15; // Very fast start
+      if (chunkCount < 30) return 25; // Medium speed
+      return 40; // Comfortable reading speed for longer content
+    };
+    
+    // Dynamic chunk size based on content flow
+    const getChunkSize = (buffer: string, chunkCount: number) => {
+      // Start with smaller chunks for immediate responsiveness
+      if (chunkCount < 5) return 3;
+      if (chunkCount < 15) return 8;
+      return 15; // Larger chunks for efficiency
+    };
 
     for await (const event of stream) {
       if (
@@ -530,17 +544,41 @@ class MetaSearchAgent implements MetaSearchAgentType {
         // Accumulate the chunk in the buffer
         buffer += event.data.chunk;
         
+        // Get dynamic chunk size
+        const currentChunkSize = getChunkSize(buffer, totalChunksEmitted);
+        
         // If we have enough characters, emit them
-        while (buffer.length >= CHUNK_SIZE) {
-          const chunk = buffer.slice(0, CHUNK_SIZE);
-          buffer = buffer.slice(CHUNK_SIZE);
+        while (buffer.length >= currentChunkSize) {
+          let chunk = buffer.slice(0, currentChunkSize);
           
-          // Emit the chunk and wait a small delay
+          // Try to break at word boundaries for better readability
+          if (buffer.length > currentChunkSize) {
+            const spaceIndex = chunk.lastIndexOf(' ');
+            const newlineIndex = chunk.lastIndexOf('\n');
+            const boundaryIndex = Math.max(spaceIndex, newlineIndex);
+            
+            // If we find a good boundary and it's not too short, use it
+            if (boundaryIndex > currentChunkSize * 0.6) {
+              chunk = buffer.slice(0, boundaryIndex + 1);
+              buffer = buffer.slice(boundaryIndex + 1);
+            } else {
+              buffer = buffer.slice(currentChunkSize);
+            }
+          } else {
+            buffer = buffer.slice(currentChunkSize);
+          }
+          
+          // Emit the chunk
           emitter.emit(
             'data',
             JSON.stringify({ type: 'response', data: chunk })
           );
-          await new Promise(resolve => setTimeout(resolve, STREAM_DELAY));
+          
+          totalChunksEmitted++;
+          
+          // Progressive delay for natural reading rhythm
+          const delay = getStreamDelay(totalChunksEmitted);
+          await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
       if (

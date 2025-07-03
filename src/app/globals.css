@@ -58,6 +58,25 @@
   }
 }
 
+/* Streaming text animations */
+@keyframes blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes cursor-slide {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100%);
+  }
+}
+
 .animate-wave {
   animation: wave 1.5s ease-in-out infinite;
 }
@@ -72,6 +91,26 @@
 
 .animate-pulse-glow {
   animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-blink {
+  animation: blink 0.8s ease-in-out infinite;
+}
+
+/* Streaming cursor styles */
+.streaming-cursor p {
+  position: relative;
+}
+
+.streaming-cursor p::after {
+  content: '';
+  position: absolute;
+  right: -4px;
+  top: 0;
+  height: 100%;
+  width: 2px;
+  background: linear-gradient(to bottom, transparent, #3B82F6, transparent);
+  animation: cursor-slide 2s ease-in-out infinite;
 }
 
 /* Custom tooltip styles - Small but readable */
@@ -123,4 +162,14 @@ div.react-tooltip,
   transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
+}
+
+/* Smooth text appearance for streaming */
+.streaming-cursor {
+  opacity: 1;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.streaming-cursor.fade-in {
+  opacity: 0;
 }

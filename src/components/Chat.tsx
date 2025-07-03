@@ -33,8 +33,37 @@ const Chat = ({
 }) => {
   const { user } = useAuth();
   const [dividerWidth, setDividerWidth] = useState(0);
+  const [showLoading, setShowLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const dividerRef = useRef<HTMLDivElement | null>(null);
   const messageEnd = useRef<HTMLDivElement | null>(null);
+  const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Handle delayed loading display to prevent flicker
+  useEffect(() => {
+    if (loading && !messageAppeared) {
+      // Only show loading skeleton after 200ms to prevent flicker
+      loadingTimeoutRef.current = setTimeout(() => {
+        setShowLoading(true);
+      }, 200);
+    } else {
+      // Clear timeout and hide loading immediately when message appears
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+        loadingTimeoutRef.current = null;
+      }
+      setShowLoading(false);
+    }
+
+    // Set streaming state when we have content appearing
+    setIsStreaming(loading && messageAppeared);
+
+    return () => {
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+      }
+    };
+  }, [loading, messageAppeared]);
 
   useEffect(() => {
     const updateDividerWidth = () => {
@@ -103,7 +132,7 @@ const Chat = ({
           </Fragment>
         );
       })}
-      {loading && !messageAppeared && <MessageBoxLoading />}
+      {showLoading && <MessageBoxLoading isStreaming={isStreaming} />}
       <div ref={messageEnd} className="h-0" />
       {dividerWidth > 0 && (
         <div

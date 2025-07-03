@@ -457,13 +457,15 @@ const ChatWindow = ({ id }: { id?: string }) => {
       if (data.type === 'init') {
         // Initial connection established - streaming is working
         console.log('Streaming connection established');
+        // Keep loading state but prepare for content
         return;
       }
 
       if (data.type === 'sources') {
         sources = data.data;
-        // Don't create a message here, wait for content
-        setMessageAppeared(true);
+        // Sources received - this means we're getting ready for content
+        // Don't set messageAppeared yet, wait for actual content
+        console.log('Sources received, preparing for content');
       }
 
       if (data.type === 'message') {
@@ -482,6 +484,10 @@ const ChatWindow = ({ id }: { id?: string }) => {
           ]);
           added = true;
           
+          // Now we have actual content - set message appeared and turn off loading
+          setMessageAppeared(true);
+          setLoading(false);
+          
           // Update URL without page refresh if we're starting a new chat from homepage
           if (newChatCreated && messages.length === 0) {
             const templateParam = focusMode !== 'escapeArtistSearch' ? `?template=${focusMode}` : '';
@@ -489,7 +495,7 @@ const ChatWindow = ({ id }: { id?: string }) => {
             window.history.replaceState(null, '', newUrl);
           }
         } else {
-          // Update existing message content
+          // Update existing message content with smooth batching
           setMessages((prev) =>
             prev.map((message) => {
               if (message.messageId === data.messageId) {
@@ -505,7 +511,6 @@ const ChatWindow = ({ id }: { id?: string }) => {
         }
 
         recievedMessage += data.data;
-        setMessageAppeared(true);
       }
 
       if (data.type === 'messageEnd') {
@@ -517,6 +522,7 @@ const ChatWindow = ({ id }: { id?: string }) => {
           ['assistant', recievedMessage],
         ]);
 
+        // Ensure loading is definitely off at the end
         setLoading(false);
 
         const lastMsg = messagesRef.current[messagesRef.current.length - 1];

@@ -1645,62 +1645,64 @@ const MessageBox = ({
             ref={dividerRef}
             className="w-full"
           >
-            {/* Refined Tab Navigation */}
-            <div 
-              ref={tabNavRef}
-              className={cn(
-                "bg-light-primary dark:bg-dark-primary border-b border-light-200 dark:border-dark-200 mb-6",
-              )}>
-              <nav className="flex space-x-8">
-                <button
-                  onClick={() => handleTabClick('answer')}
-                  className={cn(
-                    'py-3 px-1 border-b-2 font-medium text-sm transition-colors duration-200',
-                    activeTab === 'answer'
-                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
-                  )}
-                >
-                  <div className="flex items-center space-x-2">
-                    <Atom
-                      className={cn(
-                        isLast && loading ? 'animate-spin' : 'animate-none',
-                      )}
-                      size={18}
-                    />
-                    <span>AI Answer</span>
-                  </div>
-                </button>
-                <button
-                  onClick={() => handleTabClick('images')}
-                  className={cn(
-                    'py-3 px-1 border-b-2 font-medium text-sm transition-colors duration-200',
-                    activeTab === 'images'
-                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
-                  )}
-                >
-                  <div className="flex items-center space-x-2">
-                    <ImagesIcon size={18} />
-                    <span>Images</span>
-                  </div>
-                </button>
-                <button
-                  onClick={() => handleTabClick('videos')}
-                  className={cn(
-                    'py-3 px-1 border-b-2 font-medium text-sm transition-colors duration-200',
-                    activeTab === 'videos'
-                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
-                  )}
-                >
-                  <div className="flex items-center space-x-2">
-                    <VideoIcon size={18} />
-                    <span>Videos</span>
-                  </div>
-                </button>
-              </nav>
-            </div>
+            {/* Only show tab navigation when we have meaningful content or when not currently streaming this message */}
+            {(message.content.trim().length > 5 || !(loading && isLast)) && (
+              <div 
+                ref={tabNavRef}
+                className={cn(
+                  "bg-light-primary dark:bg-dark-primary border-b border-light-200 dark:border-dark-200 mb-6",
+                )}>
+                <nav className="flex space-x-8">
+                  <button
+                    onClick={() => handleTabClick('answer')}
+                    className={cn(
+                      'py-3 px-1 border-b-2 font-medium text-sm transition-colors duration-200',
+                      activeTab === 'answer'
+                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                    )}
+                  >
+                    <div className="flex items-center space-x-2">
+                      <Atom
+                        className={cn(
+                          isLast && loading ? 'animate-spin' : 'animate-none',
+                        )}
+                        size={18}
+                      />
+                      <span>AI Answer</span>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => handleTabClick('images')}
+                    className={cn(
+                      'py-3 px-1 border-b-2 font-medium text-sm transition-colors duration-200',
+                      activeTab === 'images'
+                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                    )}
+                  >
+                    <div className="flex items-center space-x-2">
+                      <ImagesIcon size={18} />
+                      <span>Images</span>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => handleTabClick('videos')}
+                    className={cn(
+                      'py-3 px-1 border-b-2 font-medium text-sm transition-colors duration-200',
+                      activeTab === 'videos'
+                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                    )}
+                  >
+                    <div className="flex items-center space-x-2">
+                      <VideoIcon size={18} />
+                      <span>Videos</span>
+                    </div>
+                  </button>
+                </nav>
+              </div>
+            )}
 
             {/* Tab Content */}
             {activeTab === 'answer' && (
@@ -1727,8 +1729,24 @@ const MessageBox = ({
                     className={cn(
                       'prose prose-h1:mb-3 prose-h2:mb-2 prose-h2:mt-6 prose-h2:font-[800] prose-h3:mt-4 prose-h3:mb-1.5 prose-h3:font-[600] dark:prose-invert prose-p:leading-relaxed prose-pre:p-0 font-[400]',
                       'max-w-none break-words text-black dark:text-white',
+                      // Add smooth cursor effect when streaming
+                      isLast && loading && 'streaming-cursor'
                     )}
-                    options={markdownOverrides}
+                    options={{
+                      ...markdownOverrides,
+                      // Add custom element rendering for streaming effect
+                      overrides: {
+                        ...markdownOverrides.overrides,
+                        p: ({ children }) => (
+                          <p className="relative">
+                            {children}
+                            {isLast && loading && (
+                              <span className="absolute -right-4 top-0 h-full w-0.5 bg-blue-500 animate-blink" />
+                            )}
+                          </p>
+                        )
+                      }
+                    }}
                   >
                     {parsedMessage}
                   </Markdown>
