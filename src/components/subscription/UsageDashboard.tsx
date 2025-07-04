@@ -17,7 +17,11 @@ interface UsageData {
   plan: string;
 }
 
-export const UsageDashboard: React.FC = () => {
+interface UsageDashboardProps {
+  showModelUsage?: boolean;
+}
+
+export const UsageDashboard: React.FC<UsageDashboardProps> = ({ showModelUsage = true }) => {
   const [usageData, setUsageData] = useState<UsageData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -144,78 +148,104 @@ export const UsageDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Model Usage */}
-      <div className="grid gap-4">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
-          <Zap className="w-5 h-5 mr-2" />
-          Usage by Model
-        </h3>
+      {/* Model Usage - Only show for Pro users */}
+      {showModelUsage ? (
+        <div className="grid gap-4">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+            <Zap className="w-5 h-5 mr-2" />
+            Usage by Model
+          </h3>
 
-        {Object.keys(usageByModel).length === 0 ? (
-          <div className="text-center py-8 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-            <p className="text-gray-600 dark:text-gray-400">
-              No usage data available for this month
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {/* Show only the 4 primary models */}
-            {['gpt_4o_mini', 'gpt_4_1', 'claude_sonnet_4', 'gemini_2_5_pro'].map((model) => {
-              const limit = usageData.limits[model] || 0;
-              const used = usageByModel[model] || 0;
-              const percentage = getUsagePercentage(used, limit);
-              const remaining = Math.max(0, limit - used);
+          {Object.keys(usageByModel).length === 0 ? (
+            <div className="text-center py-8 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+              <p className="text-gray-600 dark:text-gray-400">
+                No usage data available for this month
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Show only the 4 primary models */}
+              {['gpt_4o_mini', 'gpt_4_1', 'claude_sonnet_4', 'gemini_2_5_pro'].map((model) => {
+                const limit = usageData.limits[model] || 0;
+                const used = usageByModel[model] || 0;
+                const percentage = getUsagePercentage(used, limit);
+                const remaining = Math.max(0, limit - used);
 
-              return (
-                <div
-                  key={model}
-                  className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700"
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <h4 className="font-medium text-gray-900 dark:text-white">
-                        {model === 'gpt_4o_mini' ? 'GPT-4o Mini' :
-                         model === 'gpt_4_1' ? 'GPT-4.1' :
-                         model === 'claude_sonnet_4' ? 'Claude 4 Sonnet' :
-                         model === 'gemini_2_5_pro' ? 'Gemini 2.5 Pro' :
-                         model.replace(/[-_]/g, ' ')}
-                      </h4>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {used.toLocaleString()} / {limit.toLocaleString()} tokens
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <div className={`text-lg font-semibold ${getStatusColor(percentage)}`}>
-                        {percentage.toFixed(1)}%
+                return (
+                  <div
+                    key={model}
+                    className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700"
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <h4 className="font-medium text-gray-900 dark:text-white">
+                          {model === 'gpt_4o_mini' ? 'GPT-4o Mini' :
+                           model === 'gpt_4_1' ? 'GPT-4.1' :
+                           model === 'claude_sonnet_4' ? 'Claude 4 Sonnet' :
+                           model === 'gemini_2_5_pro' ? 'Gemini 2.5 Pro' :
+                           model.replace(/[-_]/g, ' ')}
+                        </h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          {used.toLocaleString()} / {limit.toLocaleString()} tokens
+                        </p>
                       </div>
-                      {percentage >= 90 && (
-                        <div className="flex items-center text-red-500 text-sm">
-                          <AlertTriangle className="w-4 h-4 mr-1" />
-                          Near limit
+                      <div className="text-right">
+                        <div className={`text-lg font-semibold ${getStatusColor(percentage)}`}>
+                          {percentage.toFixed(1)}%
                         </div>
-                      )}
+                        {percentage >= 90 && (
+                          <div className="flex items-center text-red-500 text-sm">
+                            <AlertTriangle className="w-4 h-4 mr-1" />
+                            Near limit
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mb-2">
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full transition-all duration-300 ${getBarColor(percentage)}`}
+                          style={{ width: `${percentage}%` }}
+                        ></div>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
+                      <span>Used: {used.toLocaleString()}</span>
+                      <span>Remaining: {remaining.toLocaleString()}</span>
                     </div>
                   </div>
-
-                  <div className="mb-2">
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                      <div
-                        className={`h-2 rounded-full transition-all duration-300 ${getBarColor(percentage)}`}
-                        style={{ width: `${percentage}%` }}
-                      ></div>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
-                    <span>Used: {used.toLocaleString()}</span>
-                    <span>Remaining: {remaining.toLocaleString()}</span>
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ) : (
+        // Pro upgrade message for free users
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-8 border border-blue-200/50 dark:border-blue-700/50">
+          <div className="text-center">
+            <div className="flex justify-center mb-4">
+              <div className="p-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full">
+                <Zap className="w-6 h-6 text-white" />
+              </div>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+              Detailed Usage Analytics
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
+              Get detailed insights into your usage by model, track performance metrics, and optimize your AI workflow with Pro.
+            </p>
+            <button
+              onClick={() => window.location.href = '/pricing'}
+              className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl font-medium shadow-lg shadow-blue-500/25 transition-all duration-200 hover:scale-105 inline-flex items-center space-x-2"
+            >
+              <span>Upgrade to Pro</span>
+              <BarChart3 className="w-4 h-4" />
+            </button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Usage Tips */}
       <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6 border border-blue-200 dark:border-blue-800">

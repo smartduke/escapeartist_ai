@@ -390,7 +390,7 @@ export default function ProfilePage() {
 
           {activeTab === 'usage' && (
             <ProfileSection title="Usage Analytics" icon={BarChart3}>
-              <UsageDashboard />
+              <UsageDashboard showModelUsage={isPro} />
             </ProfileSection>
           )}
 
