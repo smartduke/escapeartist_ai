@@ -201,12 +201,12 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
   };
 
   const navLinks: NavLink[] = [
-    {
-      icon: Compass,
-      href: '/discover',
-      active: segments.includes('discover'),
-      label: 'Discover',
-    },
+    // {
+    //   icon: Compass,
+    //   href: '/discover',
+    //   active: segments.includes('discover'),
+    //   label: 'Discover',
+    // },
     {
       icon: History,
       href: '/library',
@@ -229,7 +229,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
                 "flex-1 text-xl font-medium duration-300 ease-in-out",
                 isExpanded ? "opacity-100 pl-2" : "opacity-0 w-0 pl-0"
               )}>
-                EscapeArtist AI
+                EscapeArtist
               </div>
               <div className="flex items-center justify-center w-10">
                 <button
