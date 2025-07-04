@@ -5,7 +5,6 @@ import {
   History, 
   Compass, 
   PenLine, 
-  Settings, 
   UserIcon, 
   LogOut, 
   ChevronRightIcon, 
@@ -458,14 +457,6 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
                           <CreditCard size={18} className="text-gray-600 dark:text-gray-400" />
                           <span className="text-sm font-medium">Pricing</span>
                         </Link>
-                        <Link
-                          href="/settings"
-                          onClick={() => setDropdownOpen(false)}
-                          className="flex items-center space-x-3 p-3 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20 rounded-xl transition-all duration-200 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-                        >
-                          <Settings size={18} className="text-gray-600 dark:text-gray-400" />
-                          <span className="text-sm font-medium">Settings</span>
-                        </Link>
                         <button
                           onClick={() => {
                             signOut();
@@ -492,14 +483,6 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
                       </div>
                     ) : (
                       <div className="flex flex-col space-y-3">
-                        <Link
-                          href="/settings"
-                          onClick={() => setDropdownOpen(false)}
-                          className="flex items-center space-x-3 p-3 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20 rounded-xl transition-all duration-200 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-                        >
-                          <Settings size={18} className="text-gray-600 dark:text-gray-400" />
-                          <span className="text-sm font-medium">Settings</span>
-                        </Link>
                         <button
                           onClick={() => {
                             setAuthMode('login');

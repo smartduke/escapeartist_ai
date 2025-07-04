@@ -1,6 +1,6 @@
 'use client';
 
-import { Settings as SettingsIcon, ArrowLeft, Loader2 } from 'lucide-react';
+import { Settings as SettingsIcon, ArrowLeft, Loader2, Shield, AlertTriangle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Switch } from '@headlessui/react';
@@ -8,6 +8,7 @@ import ThemeSwitcher from '@/components/theme/Switcher';
 import { ImagesIcon, VideoIcon } from 'lucide-react';
 import Link from 'next/link';
 import { PROVIDER_METADATA } from '@/lib/providers';
+import { useAuth } from '@/components/auth/AuthProvider';
 
 interface SettingsType {
   chatModelProviders: {
@@ -127,6 +128,7 @@ const SettingsSection = ({
 );
 
 const Page = () => {
+  const { user, isLoading: authLoading } = useAuth();
   const [config, setConfig] = useState<SettingsType | null>(null);
   const [chatModels, setChatModels] = useState<Record<string, any>>({});
   const [embeddingModels, setEmbeddingModels] = useState<Record<string, any>>(
@@ -148,6 +150,30 @@ const Page = () => {
   const [automaticVideoSearch, setAutomaticVideoSearch] = useState(false);
   const [systemInstructions, setSystemInstructions] = useState<string>('');
   const [savingStates, setSavingStates] = useState<Record<string, boolean>>({});
+
+  // Check if user has admin access
+  const ADMIN_EMAIL = 'dinakar@escapeartist.com';
+  const hasAdminAccess = user?.email === ADMIN_EMAIL;
+
+  // Show loading state while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center space-y-4">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+          <p className="text-gray-600 dark:text-gray-400">Checking access permissions...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect to home if user doesn't have admin access
+  if (!user || !hasAdminAccess) {
+    if (typeof window !== 'undefined') {
+      window.location.href = '/';
+    }
+    return null;
+  }
 
   useEffect(() => {
     const fetchConfig = async () => {
